@@ -1,0 +1,390 @@
+﻿@using System.Reflection
+@using System.Text.Json
+
+@inject ISnackbar Snackbar
+@inject IFileTagService FileTagService
+@inject IDialogService DialogService
+@inject IObjectComparisonService ObjectComparisonService
+
+<MudGrid Spacing="0">
+    @* Table *@
+    <MudItem xs="12" md="@GetTableWidth()">
+        <GenericDataTable Height="calc(100vh - 236px)"
+                          TItem="FileTagViewModel"
+                          Items="@FileTags"
+                          TableTitle="Klik på en Filkategori"
+                          Filter="FilterFunc"
+                          RowsPerPage="20"
+                          OnRowClick="RowClicked">
+            <HeaderTemplate>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<FileTagViewModel, object>(x => x.TagName)">
+                        Navn
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    Administrator Synlighed
+                </MudTh>
+                <MudTh>
+                    Controller Synlighed
+                </MudTh>
+                <MudTh>
+                    Driftskoordinator Synlighed
+                </MudTh>
+                <MudTh>
+                    Human Resources Synlighed
+                </MudTh>
+                <MudTh>
+                    Pædagogisk Konsulent Synlighed
+                </MudTh>
+                <MudTh>
+                    Uddannelsesleder Synlighed
+                </MudTh>
+                <MudTh>
+                    Uddannelseschef Synlighed
+                </MudTh>
+            </HeaderTemplate>
+            <RowTemplate Context="fileTag">
+                <MudTd Class="cursor-pointer">@fileTag.TagName</MudTd>
+
+                <MudTd>
+                    <MudCheckBox T="bool" Value="@(HasRole(fileTag.FileTagUserRoles, UserRole.Administrator))" ReadOnly="true"
+                                 @onclick="() => RowClicked(fileTag)" />
+                </MudTd>
+                <MudTd>
+                    <MudCheckBox T="bool" Value="@(HasRole(fileTag.FileTagUserRoles, UserRole.Controller))" ReadOnly="true"
+                                 @onclick="() => RowClicked(fileTag)" />
+                </MudTd>
+                <MudTd>
+                    <MudCheckBox T="bool" Value="@(HasRole(fileTag.FileTagUserRoles, UserRole.Driftskoordinator))" ReadOnly="true"
+                                 @onclick="() => RowClicked(fileTag)" />
+                </MudTd>
+                <MudTd>
+                    <MudCheckBox T="bool" Value="@(HasRole(fileTag.FileTagUserRoles, UserRole.Human_Resources))" ReadOnly="true"
+                                 @onclick="() => RowClicked(fileTag)" />
+                </MudTd>
+                <MudTd>
+                    <MudCheckBox T="bool" Value="@(HasRole(fileTag.FileTagUserRoles, UserRole.Pædagogisk_konsulent))" ReadOnly="true"
+                                 @onclick="() => RowClicked(fileTag)" />
+                </MudTd>
+                <MudTd>
+                    <MudCheckBox T="bool" Value="@(HasRole(fileTag.FileTagUserRoles, UserRole.Uddannelsesleder))" ReadOnly="true"
+                                 @onclick="() => RowClicked(fileTag)" />
+                </MudTd>
+                <MudTd>
+                    <MudCheckBox T="bool" Value="@(HasRole(fileTag.FileTagUserRoles, UserRole.Uddannelseschef))" ReadOnly="true"
+                                 @onclick="() => RowClicked(fileTag)" />
+                </MudTd>
+            </RowTemplate>
+        </GenericDataTable>
+    </MudItem>
+
+    @* Edit form *@
+    @if (SelectedFileTag is not null)
+    {
+        <MudItem xs="4" md="3" lg="3" Class="scrollable-tab-container">
+            <MudCard Class="pa-4 mb-4" Elevation="0">
+                <MudForm Model="EditableFileTag" @ref="form" @bind-IsValid="@success">
+                    <MudGrid Spacing="2" Class="px-2 d-flex justify-center">
+
+                        <!-- FileTag Name Input -->
+                        <MudItem xs="12">
+                            <MudTextField T="string"
+                                          Label="Navn"
+                                          @bind-Value="EditableFileTag!.TagName"
+                                          Variant="Variant.Outlined"
+                                          Immediate="true"
+                                          Required="true"
+                                          RequiredError="Navn på filkategori er påkrævet."
+                                          Disabled="!IsEditing" />
+                        </MudItem>
+
+                        <!-- FileTag Visibility Dropdown -->
+                        <MudItem xs="12">
+                            <MudSelect T="UserRole?"
+                                       Disabled="!IsEditing"
+                                       MultiSelection="true"
+                                       Variant="Variant.Outlined"
+                                       Label="Brugerrolle synlighed"
+                                       SelectAll="true" @bind-SelectedValues="SelectedUserRoles"
+                                       MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                                @foreach (var role in Enum.GetValues<UserRole>())
+                                {
+                                    <MudSelectItem T="UserRole?" Value="@role">@role.ToString().Replace('_', ' ')</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <!-- Submit Button Row -->
+                        <MudItem xs="12">
+                            <MudCardActions Class="d-flex justify-space-evenly">
+                                @if (!IsEditing)
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Error"
+                                               OnClick="DeleteFileTag">
+                                        Slet
+                                    </MudButton>
+
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Primary"
+                                               OnClick="EnterEditMode">
+                                        Rediger
+                                    </MudButton>
+                                }
+                                else
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Surface"
+                                               OnClick="CancelEdit">
+                                        Annuller
+                                    </MudButton>
+
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Primary"
+                                               OnClick="SaveChanges"
+                                               Disabled="!success">
+                                        Gem
+                                    </MudButton>
+                                }
+                            </MudCardActions>
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            </MudCard>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    private bool success;
+    private MudForm form = new();
+
+    private bool IsEditing { get; set; } = false;
+
+    private FileTagViewModel? SelectedFileTag { get; set; }
+    private FileTagViewModel? EditableFileTag { get; set; }
+    private FileTag TempTag { get; set; } = new();
+
+
+    // Table data
+    private List<FileTagViewModel> FileTags { get; set; } = new();
+
+    // Dropdown data
+    private IEnumerable<UserRole?> SelectedUserRoles { get; set; } = new List<UserRole?>();
+    private IEnumerable<UserRole?> OriginalUserRoles { get; set; } = new List<UserRole?>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        FileTags = await FileTagService.GetAllFileTagsAsync();
+    }
+
+    private async Task SaveChanges()
+    {
+        await form.Validate();
+        if (!form.IsValid || EditableFileTag is null)
+        {
+            return;
+        }
+
+        // Update FileTagUserRoles based on SelectedUserRoles before sending to the API
+        EditableFileTag.FileTagUserRoles = SelectedUserRoles
+            .Where(r => r.HasValue)
+            .Select(r => new FileTagUserRoleViewModel
+                {
+                    FileTagId = EditableFileTag.FileTagId,
+                    Role = r.Value
+                })
+            .ToList();
+
+            
+        var result = await FileTagService.UpdateFileTagAsync(EditableFileTag);
+        if (result)
+        {
+            // Overwrite the selected filetag with the updated one
+            CopyFileTagProperties(EditableFileTag, SelectedFileTag!);
+            int index = FileTags.FindIndex(d => d.FileTagId == EditableFileTag.FileTagId);
+            if (index != -1)
+            {
+                // Replace the FileTag in the list
+                FileTags[index] = SelectedFileTag!;
+            }
+            IsEditing = false;
+            // Overwrite original role selection with new one
+            OriginalUserRoles = new List<UserRole?>(SelectedUserRoles);
+            Snackbar.Add("Filkategori opdateret.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Filkategorien kunnne ikke opdateres", Severity.Error);
+        }
+    }
+
+    private async Task DeleteFileTag()
+    {
+        if (SelectedFileTag is null || EditableFileTag is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { x => x.Color, Color.Error },
+            { x => x.ContentText, $"Er du sikker på at du vil slette den valgte Filkategori: {EditableFileTag.TagName}?" },
+            { x => x.ButtonText, "Slet" },
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
+        var dialogResult = await dialog.Result;
+
+        if (dialogResult is null || dialogResult.Canceled)
+        {
+            return; // User chose to not delete
+        }
+
+        bool deleteResult = await FileTagService.DeleteFileTagAsync(SelectedFileTag.FileTagId);
+        if (deleteResult)
+        {
+            FileTags.RemoveAll(d => d.FileTagId == SelectedFileTag.FileTagId);
+            SelectedFileTag = null;
+            EditableFileTag = null;
+            Snackbar.Add("Filkategori slettet.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Filkategorien kunne ikke slettes", Severity.Error);
+        }
+    }
+
+    private void SetSelectedUserRoles(FileTagViewModel fileTag)
+    {
+        SelectedUserRoles = fileTag.FileTagUserRoles?
+            .Select(utr => (UserRole?)utr.Role)
+            .ToList() ?? new List<UserRole?>();
+
+        // Store the original user roles separately
+        OriginalUserRoles = new List<UserRole?>(SelectedUserRoles);
+    }
+
+    private void EnterEditMode()
+    {
+        IsEditing = true;
+    }
+
+    private void CancelEdit()
+    {
+        IsEditing = false;
+
+        // Restore original values by re-initializing EditableLocation
+        if (SelectedFileTag is not null && EditableFileTag is not null)
+        {
+            Console.WriteLine("yahoo");
+            CopyFileTagProperties(SelectedFileTag, EditableFileTag);
+            SelectedUserRoles = new List<UserRole?>(OriginalUserRoles);
+        }
+
+        // Reset validation
+        form.ResetValidation();
+    }
+
+    private string GetMultiSelectionText(List<string> selectedValues)
+    {
+        if (selectedValues.Count == 0)
+        {
+            return string.Empty; // Label gets displayed if an empty string is returned
+        }
+
+        return $"{selectedValues.Count} valgt";
+    }
+
+    // Methods for the table appearance and functionality
+    private int GetTableWidth()
+    {
+        return SelectedFileTag is not null ? 9 : 12;
+    }
+
+    // Controls the Checkbox state in the table.
+    private bool HasRole(List<FileTagUserRoleViewModel> userRoles, UserRole role)
+    {
+        return userRoles.Any(utr => utr.Role == role);
+    }
+
+
+    // Filter function to allow searching for properties in GenericDataTable component.
+    private bool FilterFunc(FileTagViewModel item, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        return item.TagName.Contains(searchString, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task RowClicked(FileTagViewModel fileTag)
+    {
+        Console.WriteLine("ROW WAS CLICKED!");
+
+        bool hasUnsavedChanges =
+        EditableFileTag != null &&
+        ObjectComparisonService.AreSimplePropertiesDifferent(EditableFileTag, SelectedFileTag) ||
+        !AreListsEqual(SelectedUserRoles, OriginalUserRoles);
+
+        // If in edit mode with unsaved changes, ask for confirmation to switch.
+        if (IsEditing && hasUnsavedChanges)
+        {
+            var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { x => x.Color, Color.Error },
+            { x => x.ContentText, "Du har ændringer, som ikke er blevet gemt. Vil du opgive de nuværende ændringer og skifte til den valgte filkategori?" },
+            { x => x.ButtonText, "Skift" },
+        };
+            Console.WriteLine("DA DIALOG IS OPENED");
+            var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
+            var result = await dialog.Result;
+
+            if (result.Canceled)
+            {
+                return; // User chose to stay, keep the same location.
+            }
+        }
+
+        if (EditableFileTag is null)
+        {
+            EditableFileTag = new FileTagViewModel();
+        }
+
+        // Set the selected file tag and initialize the editable clone.
+        CopyFileTagProperties(fileTag, EditableFileTag);
+        SelectedFileTag = fileTag;
+
+        // Set SelectedUserRoles based on the file tag's current roles.
+        SetSelectedUserRoles(fileTag);
+
+        IsEditing = false;  // Reset edit mode after switching
+    }
+
+    private bool AreListsEqual(IEnumerable<UserRole?>? list1, IEnumerable<UserRole?>? list2)
+    {
+        if (list1 == null || list2 == null)
+            return list1 == list2; // Both null means they are equal
+
+        var sortedList1 = list1.OrderBy(x => x).ToList();
+        var sortedList2 = list2.OrderBy(x => x).ToList();
+
+        return sortedList1.SequenceEqual(sortedList2);
+    }
+
+
+    private void CopyFileTagProperties(FileTagViewModel source, FileTagViewModel target)
+    {
+        target.FileTagId = source.FileTagId;
+        target.TagName = source.TagName;
+
+        // Map the FileTagUserRoles from source to target
+        target.FileTagUserRoles = source.FileTagUserRoles != null
+            ? source.FileTagUserRoles.Select(utr => new FileTagUserRoleViewModel
+                {
+                    FileTagId = utr.FileTagId,
+                    Role = utr.Role
+                }).ToList()
+            : new List<FileTagUserRoleViewModel>();
+    }
+}

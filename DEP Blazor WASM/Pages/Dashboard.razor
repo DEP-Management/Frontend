@@ -1,0 +1,220 @@
+﻿@page "/"
+@using System.Globalization
+
+@inject IUserService userService
+@inject IAuthService authService
+@inject IDialogService dialogService
+@inject IPersonService personService
+@inject CustomAuthStateProvider _authStateProvider
+@inject NavigationManager NavigationManager
+
+@if (currentUser is null)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+else if (currentUser.UserRole == UserRole.Driftskoordinator || currentUser.UserRole == UserRole.Pædagogisk_konsulent || currentUser.UserRole == UserRole.Uddannelseschef || currentUser.UserRole == UserRole.Uddannelsesleder)
+{
+    <MudContainer Class="px-0 mt-0" MaxWidth="MaxWidth.ExtraLarge">
+        <MudGrid Spacing="12">
+            <MudItem xs="3" Class="mt-4">
+                <MudText Typo="Typo.h4" Align="Align.Center">@currentUser.Name</MudText>
+                <MudText Typo="Typo.h6" Align="Align.Center">@currentUser.UserRole.ToString().Replace('_', ' ')</MudText>
+                <MudGrid Class="d-flex justify-center">
+                    <MudItem xs="10">
+                        <MudTextField T="string" Variant="Variant.Outlined" Label="Afdeling" ReadOnly Value="@((!string.IsNullOrWhiteSpace(currentUser.DepartmentName) ? currentUser.DepartmentName : "Ingen Afdeling"))" />
+                    </MudItem>
+                    <MudItem xs="10">
+                        <MudTextField T="string" Variant="Variant.Outlined" Label="Lokation" ReadOnly Value="@((!string.IsNullOrWhiteSpace(currentUser.LocationName) ? currentUser.LocationName : "Ingen Lokation"))" />
+                    </MudItem>
+                    @if (currentUser.EducationBossName is not null)
+                    {
+                        <MudItem xs="10">
+                            <MudTextField T="string" Variant="Variant.Outlined" Label="Uddannelseschef" ReadOnly Value="@currentUser.EducationBossName" />
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudItem>
+            <MudItem xs="9" Class="mt-0">
+                @if (currentUser.UserRole == UserRole.Uddannelseschef)
+                {
+                    <GenericDataTable Height="calc(100vh - 188px)"
+                                      TItem="UserViewModel"
+                                      Items="@currentUser.EducationLeaders"
+                                      TableTitle="Uddannelsesledere tilknyttet dig"
+                                      Filter="UserFilterFunc">
+                        <HeaderTemplate>
+                            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<UserViewModel, object>(x => x.Name)">Navn</MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<UserViewModel, object>(x => x.DepartmentName!)">Afdeling</MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<UserViewModel, object>(x => x.LocationName!)">Lokation</MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<UserViewModel, object>(x => x.UserRole.ToString())">Brugerrolle</MudTableSortLabel></MudTh>
+                        </HeaderTemplate>
+                        <RowTemplate Context="user">
+                            <MudTd Style="max-width: 250px" Class="truncate-text" title="@user.Name">@user.Name</MudTd>
+                            <MudTd>@user.DepartmentName</MudTd>
+                            <MudTd Style="max-width: 250px" Class="truncate-text">@user.LocationName</MudTd>
+                            <MudTd>@user.UserRole.ToString().Replace('_', ' ')</MudTd>
+                        </RowTemplate>
+                    </GenericDataTable>
+                }
+                else
+                {
+                    @* Populate with the correct list depending on the user role *@
+                    <GenericDataTable Height="calc(100vh - 188px)"
+                                      Filter="TeacherFilterFunc"
+                                      TItem="PersonViewModel"
+                                      Items="@(currentUser.UserRole == UserRole.Pædagogisk_konsulent
+                                ? currentUser.EducationalConsultantPersons
+                                : currentUser.UserRole == UserRole.Driftskoordinator
+                                ? currentUser.OperationCoordinatorPersons
+                                : currentUser.UserRole == UserRole.Uddannelsesleder
+                                ? currentUser.EducationLeaderPersons
+                                    : Enumerable.Empty<PersonViewModel>())"
+                                      TableTitle="Undervisere tilknyttet dig">
+                        <HeaderTemplate>
+                            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonViewModel, object>(x => x.Name)">Navn</MudTableSortLabel></MudTh>
+                            <MudTh Style="max-width: 75px"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonViewModel, object>(x => x.Initials)">Initialer</MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonViewModel, object>(x => x.DepartmentName!)">Afdeling</MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonViewModel, object>(x => x.LocationName!)">Lokation</MudTableSortLabel></MudTh>
+                            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonViewModel, object>(x => x.EndDate)">Slut dato</MudTableSortLabel></MudTh>
+                            <MudTh Style="text-align:center; max-width: 75px"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonViewModel, object>(x => x.CompletedModules)">Færdige moduler</MudTableSortLabel></MudTh>
+                            <MudTh Style="text-align:center"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonViewModel, object>(x => x.SvuApplied)">SVU</MudTableSortLabel></MudTh>
+                        </HeaderTemplate>
+                        <RowTemplate Context="person">
+                            <MudTd Style="max-width: 250px" Class="cursor-pointer truncate-text" title="@person.Name"
+                                   @onclick="@(() => NavigationManager.NavigateTo($"/undervisere/profil/{person.PersonId}"))">
+                                @person.Name
+                            </MudTd>
+                            <MudTd Style="max-width: 75px">@person.Initials</MudTd>
+                            <MudTd Style="max-width: 200px" Class="truncate-text">@person.DepartmentName</MudTd>
+                            <MudTd>@person.LocationName</MudTd>
+                            <MudTd Style="@person.EndDateStyle">
+                                @person.EndDate.ToShortDateString()
+                            </MudTd>
+                            <MudTd Style="text-align:center">@person.CompletedModules</MudTd>
+                            <MudTd Class="d-flex justify-center">
+                                <MudCheckBox T="bool" Value="@person.SvuApplied" Disabled="true" />
+                            </MudTd>
+                        </RowTemplate>
+                    </GenericDataTable>
+                }
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+}
+else
+{
+    <MudContainer Class="mt-20" MaxWidth="MaxWidth.Small">
+        <MudText Typo="Typo.h3" Align="Align.Center">@currentUser.Name</MudText>
+        <MudText Typo="Typo.h5" Align="Align.Center">@currentUser.UserRole.ToString().Replace('_', ' ')</MudText>
+        <MudGrid Spacing="12" Class="mt-4">
+            <MudItem xs="12">
+                <MudGrid Class="d-flex justify-center">
+                    <MudItem xs="8">
+                        <MudTextField T="string" Variant="Variant.Outlined" Label="Afdeling" ReadOnly
+                                      Value="@((!string.IsNullOrWhiteSpace(currentUser.DepartmentName) ? currentUser.DepartmentName : "Ingen afdeling"))" />
+                    </MudItem>
+                    <MudItem xs="8">
+                        <MudTextField T="string" Variant="Variant.Outlined" Label="Lokation" ReadOnly Value="@((!string.IsNullOrWhiteSpace(currentUser.LocationName) ? currentUser.LocationName : "Ingen Lokation"))" />
+                    </MudItem>
+                    @if (currentUser.EducationBossName is not null)
+                    {
+                        <MudItem xs="12">
+                            <MudTextField T="string" Placeholder="Tester sester" Label="Uddannelseschef" ReadOnly Value="@currentUser.EducationBossName" />
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+}
+
+@code {
+    private UserDashboardViewModel? currentUser { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = await authService.GetCurrentUserId();
+
+        if (userId is null)
+        {
+            return;
+        }
+
+        // Attempt to fetch the user by ID.
+        var response = await userService.GetUserDashboardByIdAsync(userId.Value);
+
+        // Handle success or failure based on the ApiResponse.
+        if (response.Success)
+        {
+            currentUser = response.Data;
+            ComputeEndDateStyles();
+            CheckPasswordExpiryDate(currentUser.PasswordExpiryDate);
+        }
+    }
+
+    // Calculates and sets the color property for EndDate to be displayed in the table
+    private void ComputeEndDateStyles()
+    {
+        List<PersonViewModel> persons;
+
+        switch (currentUser?.UserRole)
+        {
+            case UserRole.Uddannelsesleder:
+                persons = currentUser.EducationLeaderPersons;
+                break;
+            case UserRole.Pædagogisk_konsulent:
+                persons = currentUser.EducationalConsultantPersons;
+                break;
+            case UserRole.Driftskoordinator:
+                persons = currentUser.OperationCoordinatorPersons;
+                break;
+            default:
+                persons = new List<PersonViewModel>(); // Default to an empty list if the role doesn't match
+                break;
+        }
+
+        if (persons == null || persons.Count == 0)
+        {
+            return; // Exit if there are no persons to process
+        }
+
+        personService.ComputeEndDateStyles(persons);
+    }
+
+    private async void CheckPasswordExpiryDate(DateTime expiryDate)
+    {
+        DateTime todaysDate = new DateTime();
+
+        if (expiryDate > todaysDate)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ChangePasswordDialog>
+        {
+            { x => x.ShowCancelButton, false }
+        };
+
+        var options = new DialogOptions { CloseOnEscapeKey = false, BackdropClick = false, };
+
+        await dialogService.ShowAsync<ChangePasswordDialog>("Adgangskode udløbet.", parameters, options);
+    }
+
+    // Filter function to allow searching for Person properties in GenericDataTable component.
+    private bool TeacherFilterFunc(PersonViewModel item, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        return item.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Filter function to allow searching for Person properties in GenericDataTable component.
+    private bool UserFilterFunc(UserViewModel item, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        return item.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase);
+    }
+
+
+}

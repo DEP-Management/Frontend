@@ -1,0 +1,213 @@
+﻿@using System.Globalization
+@inject IPersonService personService
+@inject IDepartmentService departmentService
+@inject ILocationService locationService
+@inject IUserService userService
+@inject IModuleService moduleService
+@inject ICourseService courseService
+@inject IPersonCourseService personCourseService
+
+<MudContainer Class="mt-8 px-8" MaxWidth="MaxWidth.False">
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="6" Style="padding: 0;">
+                <GenericDataTable Height="calc(100vh - 220px)" TItem="User" Items="@filteredLeaders" TableTitle="Uddanelsesledere" OnRowClick="GetPersonsByLeaderIdOnClick">
+
+                    <HeaderTemplate>
+                        <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<User, object>(x => x.Name)">Navn</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<User, object>(x => x.Department?.Name!)">Afdeling</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<User, object>(x => x.Location?.Name!)">Lokation</MudTableSortLabel></MudTh>
+                    </HeaderTemplate>
+                    <RowTemplate>
+                        <MudTd>@context.Name</MudTd>
+                        <MudTd>@context.Department?.Name</MudTd>
+                        <MudTd>@context.Location?.Name</MudTd>
+                    </RowTemplate>
+                    <ChildRowTemplate>
+                        @if (context.UserId == leaderId)
+                        {
+                            <MudTr>
+                                <td colspan="4">
+                                    <GenericDataTable TItem="Person" Items="@filteredPersons" TableTitle="Undervisere" OnRowClick="GetCoursesByTeacherIdOnClick">
+                                        <HeaderTemplate>
+                                            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Person, object>(x => x.Name)">Navn</MudTableSortLabel></MudTh>
+                                            <MudTh Style="max-width: 77px"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Person, object>(x => x.Initials)">Initialer</MudTableSortLabel></MudTh>
+                                            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Person, object>(x => x.Department?.Name!)">Afdeling</MudTableSortLabel></MudTh>
+                                            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Person, object>(x => x.Location?.Name!)">Lokation</MudTableSortLabel></MudTh>
+                                            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Person, object>(x => x.EndDate)">Slut dato</MudTableSortLabel></MudTh>
+                                            
+                                        </HeaderTemplate>
+                                        <RowTemplate Context="person">
+                                            <MudTd >
+                                                @person.Name
+                                            </MudTd>
+                                            <MudTd>@person.Initials</MudTd>
+                                            <MudTd Style="max-width: 250px" Class="truncate-text">@person.Department?.Name</MudTd>
+                                            <MudTd>@person.Location?.Name</MudTd>
+                                            <MudTd Style="@person.EndDateStyle">
+                                                @person.EndDate.ToShortDateString()
+                                            </MudTd>
+                                        </RowTemplate>
+                                    </GenericDataTable>
+                                </td>
+                            </MudTr>
+                        }
+                    </ChildRowTemplate>
+                </GenericDataTable>>
+        </MudItem>
+        @if (teacherId != 0)
+        {
+        <MudItem xs="12" sm="3" md="4" Style="padding: 0; padding-inline: 0px;">
+            <GenericDataTable Height="calc(100vh - 220px)" TItem="PersonCourse" Items="@filteredPersonCourses" TableTitle="Undervisere">
+                <HeaderTemplate>
+                    <MudTh style="padding-inline: 3px; padding: 10px;"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonCourse, object>(x => x.Course!.Module!.Name)">Navn</MudTableSortLabel></MudTh>
+                    <MudTh style="padding-inline: 3px;"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonCourse, object>(x => x.Course!.StartDate)">Afdeling</MudTableSortLabel></MudTh>
+                    <MudTh style="padding-inline: 3px;"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonCourse, object>(x => x.Course!.EndDate)">Lokation</MudTableSortLabel></MudTh>
+                    <MudTh style="padding-inline: 3px;"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonCourse, object>(x => x.Course!.CourseType)">CourseType</MudTableSortLabel></MudTh>
+                    <MudTh style="padding-inline: 3px;"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonCourse, object>(x => x.Status)">Status</MudTableSortLabel></MudTh>
+                </HeaderTemplate>
+                <RowTemplate >
+                    <MudTd style="padding: 5px; ">@context.Course?.Module?.Name</MudTd>
+                    <MudTd style="padding: 5px;">@context.Course?.StartDate.ToShortDateString()</MudTd>
+                    <MudTd style="padding: 5px;">@context.Course?.EndDate.ToShortDateString()</MudTd>
+                    <MudTd style="padding: 5px;">@context.Course?.CourseType</MudTd>
+                    <MudTd style="padding: 5px;">@context.Status</MudTd>
+                </RowTemplate>
+
+            </GenericDataTable>
+        </MudItem>
+        }
+        <MudItem xs="2" sm="2" md="2" Style="padding: 0;">
+            <MudPaper Elevation="2" Class="pa-4">
+                <FilterComponent ShowCourseTypeFilter="true"
+                                 ShowSecondViewSwitch="true"
+                                 ShowDepartmentFilter="true"
+                                 ShowLocationFilter="true"
+                                 Departments="departments"
+                                 Locations="locations"
+                                 SelectedDepartmentsChanged="OnDepartmentsChanged"
+                                 SelectedLocationsChanged="OnLocationsChanged"
+                                 SelectedCourseTypesChanged="OnCourseTypeChange"
+                                 SecondViewSelectionChanged="OnViewSelectionChanged" />
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+
+    [Parameter] public EventCallback<bool> SecondViewSelectionChanged { get; set; }
+
+    private int leaderId = 0;
+    private int teacherId = 0;
+
+    private List<Department> departments = new List<Department>();
+    private List<Location> locations = new List<Location>();
+    private List<Module> modules = new List<Module>();
+    private List<Person> persons = new List<Person>();
+    private List<PersonCourse> personsCourses = new List<PersonCourse>();
+    private List<User> users = new List<User>();
+    private List<User> educationBosses = new List<User>();
+    private List<User> educationalConsultants = new List<User>();
+    private List<User> educationLeaders = new List<User>();
+
+
+    private Module selectedModule = new Module();
+
+    // Filter variables
+    private IEnumerable<CourseType?> selectedCourseTypes = new List<CourseType?>();
+    private IEnumerable<Department> selectedDepartments = new List<Department>();
+    private IEnumerable<Location> selectedLocations = new List<Location>();
+    private IEnumerable<User> selectedEducationBosses = new List<User>();
+    private IEnumerable<Status> selectedStatus = new List<Status>();
+
+    private IEnumerable<User> filteredLeaders => educationLeaders
+    .Where(l =>
+    (!selectedEducationBosses.Any() || selectedEducationBosses.Any(e => e.UserId == l.EducationBossId)));
+
+    // Filters persons based on filters are applied to update table.
+    private IEnumerable<Person> filteredPersons => persons
+    .Where(p =>
+        (!selectedDepartments.Any() || selectedDepartments.Any(d => d.DepartmentId == p.DepartmentId)) &&
+        (!selectedLocations.Any() || selectedLocations.Any(l => l.LocationId == p.LocationId))
+
+    );
+
+    // Filters persons based on filters are applied to update table.
+    private IEnumerable<PersonCourse> filteredPersonCourses => personsCourses
+    .Where(pc =>
+        (!selectedStatus.Any() || selectedStatus.Contains((Status)pc.Status)) &&
+        (!selectedCourseTypes.Any() || selectedCourseTypes.Contains((CourseType)pc.Course!.CourseType))
+    );
+
+    // Methods below accept values from the filter EventCallbacks
+    private async Task OnViewSelectionChanged(bool ViewChanged)
+    {
+        await SecondViewSelectionChanged.InvokeAsync(ViewChanged);
+    }    
+
+    private async Task GetPersonsByLeaderIdOnClick(User leader)
+    {
+        if (leader == null)
+        {
+            Console.WriteLine("Error: Leader is null.");
+            return;
+        }
+        if (leaderId != leader.UserId)
+        {
+            persons = await personService.GetPersonsByCourseIdAsync(leader.UserId);
+            leaderId = leader.UserId;
+            Console.WriteLine(persons);
+        }
+        else
+        {
+            leaderId = 0;
+        }
+    }
+
+    private async Task GetCoursesByTeacherIdOnClick(Person person)
+    {
+        if (teacherId != person.PersonId)
+        {
+            personsCourses = await personCourseService.GetAllPersonCoursesForPersonAsync(person.PersonId);
+            teacherId = person.PersonId;
+            Console.WriteLine(persons);
+        }
+        else
+        {
+            teacherId = 0;
+        }
+    }
+
+    // Load needed data when entering page.
+    protected override async Task OnInitializedAsync()
+    {
+        modules = await moduleService.GetModulesAsync();
+        educationLeaders = await userService.GetUsersByUserRoleLageAsync(UserRole.Uddannelsesleder);
+        Console.WriteLine(educationLeaders);
+    }
+
+    // // Filter function to allow searching for Person properties in GenericDataTable component.
+    // private bool FilterFunc(Course item, string searchString)
+    // {
+    //     if (string.IsNullOrWhiteSpace(searchString))
+    //         return true;
+    //     return item..Contains(searchString, StringComparison.OrdinalIgnoreCase);
+    // }
+
+    // Methods below accept values from the filter EventCallbacks
+    private void OnDepartmentsChanged(IEnumerable<Department> departments)
+    {
+        selectedDepartments = departments;
+    }
+
+    private void OnLocationsChanged(IEnumerable<Location> locations)
+    {
+        selectedLocations = locations;
+    }
+
+    private void OnCourseTypeChange(IEnumerable<CourseType?> courseTypes)
+    {
+        selectedCourseTypes = courseTypes;
+    }
+}

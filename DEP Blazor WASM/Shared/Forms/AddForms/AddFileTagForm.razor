@@ -1,0 +1,108 @@
+﻿@inject IFileTagService FileTagService
+@inject ISnackbar Snackbar
+
+<MudCard Class="pa-4 mb-4" Elevation="0">
+    <MudForm Model="newFileTag" @ref="form" @bind-IsValid="@success">
+        <MudGrid Spacing="2" Class="px-2">
+
+            <!-- File Tag Information -->
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2">Filkategori Oplysninger</MudText>
+            </MudItem>
+
+            <!-- File Tag Name -->
+            <MudItem xs="12" md="6">
+                <MudTextField T="string"
+                              Label="Navn"
+                              @bind-Value="newFileTag.TagName"
+                              Immediate="true"
+                              Required="true"
+                              Variant="Variant.Outlined"
+                              RequiredError="Navn på filkategori er påkrævet." />
+            </MudItem>
+
+            <!-- Multi-Select User Role visibility -->
+            <MudItem xs="12" md="6">
+
+                <MudSelect T="UserRole?"
+                           SelectAll="true"
+                           MultiSelection="true"
+                           Variant="Variant.Outlined"
+                           Label="Brugerrolle synlighed"
+                           @bind-SelectedValues="SelectedUserRoles"
+                           MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                    @foreach (var role in Enum.GetValues<UserRole>())
+                    {
+                        <MudSelectItem T="UserRole?" Value="@role">@role.ToString().Replace('_', ' ')</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <!-- Submit Button Row -->
+            <MudItem xs="12">
+                <MudCardActions Class="d-flex justify-center">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Disabled="@(!success)"
+                               OnClick="Submit">
+                        Opret
+                    </MudButton>
+                </MudCardActions>
+            </MudItem>
+
+        </MudGrid>
+    </MudForm>
+</MudCard>
+
+@code {
+    bool success;
+    MudForm form = new();
+    private FileTagViewModel newFileTag { get; set; } = new();
+    private IEnumerable<UserRole?> SelectedUserRoles { get; set; } = new List<UserRole?>();
+
+    private void Test()
+    {
+        foreach (var role in SelectedUserRoles)
+        {
+            Console.WriteLine(role);
+        }
+        Console.WriteLine(SelectedUserRoles.Count());
+    }
+
+    private async Task Submit()
+    {
+        var fileTagDto = new FileTagViewModel
+            {
+                TagName = newFileTag.TagName,
+                FileTagUserRoles = SelectedUserRoles
+                        .Where(role => role.HasValue)
+                        .Select(role => new FileTagUserRoleViewModel { Role = role.Value })
+                        .ToList()
+            };
+
+        var fileTagCreated = await FileTagService.AddFileTagAsync(fileTagDto);
+
+        if (fileTagCreated)
+        {
+            Snackbar.Add("Filkategori oprettet", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Filkategorien kunne ikke oprettes", Severity.Error);
+        }
+
+        newFileTag = new FileTagViewModel(); // Reset form
+        form.ResetValidation();
+    }
+
+    private string GetMultiSelectionText(List<string> selectedValues)
+    {
+        if (selectedValues.Count == 0)
+        {
+            return string.Empty; // Label gets displayed if an empty string is returned
+        }
+
+        return $"{selectedValues.Count} valgt";
+    }
+
+}

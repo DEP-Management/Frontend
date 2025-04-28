@@ -1,0 +1,10 @@
+﻿.truncate-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scrollable-tab-container {
+    max-height: calc(100vh - 116px); /* Adjust based on your layout */
+    overflow-y: auto; /* Enables vertical scrolling */
+}

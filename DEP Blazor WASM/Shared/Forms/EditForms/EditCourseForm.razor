@@ -1,0 +1,359 @@
+﻿@inject ISnackbar Snackbar
+@inject ICourseService CourseService
+@inject IDialogService DialogService
+@inject IModuleService ModuleService
+@inject IObjectComparisonService ObjectComparisonService
+
+<MudGrid Spacing="0">
+    @* Table *@
+    <MudItem xs="12" md="@GetTableWidth()">
+        <GenericDataTable Height="calc(100vh - 236px)"
+        TItem="Course"
+        Items="@Courses"
+        TableTitle="Klik på et kursus"
+        RowsPerPage="20"
+        EnableSearch="false"
+        OnRowClick="RowClicked">
+            <HeaderTemplate>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Course, object>(x => x.Module?.Name!)">
+                        Modul
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Course, object>(x => x.CourseType)">
+                        Kursustype
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Course, object>(x => x.StartDate)">
+                        Start dato
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Course, object>(x => x.EndDate)">
+                        Slut dato
+                    </MudTableSortLabel>
+                </MudTh>
+            </HeaderTemplate>
+            <RowTemplate Context="course">
+                <MudTd Class="cursor-pointer" title="@course.Module?.Name">@course.Module?.Name</MudTd>
+                <MudTd Class="cursor-pointer">@course.CourseType</MudTd>
+                <MudTd Class="cursor-pointer">@course.StartDate.ToShortDateString()</MudTd>
+                <MudTd Class="cursor-pointer">@course.EndDate.ToShortDateString()</MudTd>
+            </RowTemplate>
+        </GenericDataTable>
+    </MudItem>
+
+    @* Edit form *@
+    @if (SelectedCourse is not null)
+    {
+        <MudItem xs="4" md="3" lg="3" Class="scrollable-tab-container">
+            <MudCard Class="pa-4 mb-4" Elevation="0">
+                <MudForm Model="EditableCourse" @ref="form" @bind-IsValid="@success">
+                    <MudGrid Spacing="2" Class="px-2 d-flex justify-center">
+
+                        <!-- Course Module Dropdown -->
+                        <MudItem xs="12">
+                            <MudSelect T="int"
+                            Label="Modul"
+                            Disabled="!IsEditing"
+                            Variant="Variant.Outlined"
+                            @bind-Value="EditableCourse!.ModuleId">
+                                @foreach (var module in Modules)
+                                {
+                                    <MudSelectItem T="int" Value="module.ModuleId">@module.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <!-- CourseType Dropdown -->
+                        <MudItem xs="12">
+                            <MudSelect T="CourseType"
+                            Label="Kursustype"
+                            Disabled="!IsEditing"
+                            Variant="Variant.Outlined"
+                            Placeholder="Vælg kursustype"
+                            @bind-Value="EditableCourse!.CourseType">
+                                @foreach (var type in Enum.GetValues<CourseType>())
+                                {
+                                    <MudSelectItem T="CourseType" Value="@type">@type.ToString().Replace('_', ' ')</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <!-- Start Date Input -->
+                        <MudItem xs="12">
+                            <MudDatePicker Required
+                            Label="Start Dato"
+                            Disabled="!IsEditing"
+                            Variant="Variant.Outlined"
+                            @bind-Date="tempStartDate"
+                            RequiredError="Start Dato er påkrævet" />
+                        </MudItem>
+
+                        <!-- End Date Input -->
+                        <MudItem xs="12">
+                            <MudDatePicker Required
+                            Label="Slut Dato"
+                            Disabled="!IsEditing"
+                            @bind-Date="tempEndDate"
+                            Variant="Variant.Outlined"
+                            RequiredError="Slut Dato er påkrævet" />
+                        </MudItem>
+
+
+                        <!-- Submit Button Row -->
+                        <MudItem xs="12">
+                            <MudCardActions Class="d-flex justify-space-evenly">
+                                @if (!IsEditing)
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Error"
+                                    OnClick="DeleteCourse">
+                                        Slet
+                                    </MudButton>
+
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Primary"
+                                    OnClick="EnterEditMode">
+                                        Rediger
+                                    </MudButton>
+                                }
+                                else
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Surface"
+                                    OnClick="CancelEdit">
+                                        Annuller
+                                    </MudButton>
+
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Primary"
+                                    OnClick="SaveChanges"
+                                    Disabled="!success">
+                                        Gem
+                                    </MudButton>
+                                }
+                            </MudCardActions>
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            </MudCard>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    private bool success;
+    private MudForm form = new();
+
+    private bool IsEditing { get; set; } = false;
+
+    private Course? SelectedCourse { get; set; }
+    private Course? EditableCourse { get; set; }
+
+    // Temp holders as DatePickers require a nullable DateTime
+    private DateTime? tempStartDate;
+    private DateTime? tempEndDate;
+
+    // Dropdown data
+    private List<Entities.Models.Module> Modules { get; set; } = new();
+    private List<Course> Courses { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Courses = await CourseService.GetCoursesAsync();
+        Modules = await ModuleService.GetModulesAsync();
+    }
+
+    private async Task SaveChanges()
+    {
+        if (!await ValidateFormAndDatesAsync())
+        {
+            return;
+        }
+
+        AssignEditableCourseDates();
+
+        var result = await CourseService.UpdateCourseAsync(EditableCourse);
+        if (result)
+        {
+            UpdateDisplayCourse();
+            IsEditing = false;
+            Snackbar.Add("Kurset er opdateret.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Kurset kunnne ikke opdateres", Severity.Error);
+        }
+    }
+
+    private async Task<bool> ValidateFormAndDatesAsync()
+    {
+        await form.Validate();
+        if (!form.IsValid || EditableCourse is null)
+        {
+            return false;
+        }
+
+        if (tempStartDate is null || tempEndDate is null)
+        {
+            Snackbar.Add("Start dato og slut dato er påkrævede.", Severity.Error);
+            return false;
+        }
+
+        return true;
+    }
+
+    private void AssignEditableCourseDates()
+    {
+        EditableCourse!.StartDate = tempStartDate!.Value;
+        EditableCourse.EndDate = tempEndDate!.Value;
+    }
+
+    private void UpdateDisplayCourse()
+    {
+        // Copy properties from EditableCourse to SelectedCourse.
+        CopyCourseProperties(EditableCourse!, SelectedCourse!);
+
+        // Update the table display details.
+        int index = Courses.FindIndex(d => d.CourseId == EditableCourse!.CourseId);
+        if (index != -1)
+        {
+            SetTableDisplayObjects();
+            Courses[index] = SelectedCourse!;
+        }
+    }
+
+
+    private void SetTableDisplayObjects()
+    {
+        if (EditableCourse is null || SelectedCourse is null)
+        {
+            return;
+        }
+
+        // Needed to display the updated names in the table.
+        SelectedCourse.Module = Modules.FirstOrDefault(d => d.ModuleId == EditableCourse.ModuleId);
+    }
+
+    private async Task DeleteCourse()
+    {
+        if (SelectedCourse is null || EditableCourse is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { x => x.Color, Color.Error },
+            { x => x.ContentText, $"Er du sikker på at du vil slette det valgte Kursus?" },
+            { x => x.ButtonText, "Slet" },
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
+        var dialogResult = await dialog.Result;
+
+        if (dialogResult is null || dialogResult.Canceled)
+        {
+            return; // User chose to not delete
+        }
+
+        bool deleteResult = await CourseService.DeleteCourseAsync(SelectedCourse.CourseId);
+        if (deleteResult)
+        {
+            Courses.RemoveAll(d => d.CourseId == SelectedCourse.CourseId);
+            SelectedCourse = null;
+            EditableCourse = null;
+            StateHasChanged();
+            Snackbar.Add("Kurset blev slettet.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Kurset kunne ikke slettes", Severity.Error);
+        }
+    }
+
+    private void EnterEditMode()
+    {
+        IsEditing = true;
+    }
+
+    private void CancelEdit()
+    {
+        IsEditing = false;
+
+        // Restore original values by re-initializing EditableLocation
+        if (SelectedCourse is not null && EditableCourse is not null)
+        {
+            CopyCourseProperties(SelectedCourse, EditableCourse);
+        }
+
+        // Reset validation
+        form.ResetValidation();
+    }
+
+    // Methods for the table appearance and functionality
+    private int GetTableWidth()
+    {
+        return SelectedCourse is not null ? 9 : 12;
+    }
+
+    private async Task RowClicked(Course course)
+    {
+
+        // Check if user is in editmode and has changed any values
+        if (IsEditing && EditableCourse != null && (CompareTempDates() || ObjectComparisonService.AreSimplePropertiesDifferent(EditableCourse, SelectedCourse)))
+        {
+            var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { x => x.Color, Color.Error },
+            { x => x.ContentText, "Du har ændringer, som ikke er blevet gemt. Vil du opgive de nuværende ændringer og skifte til det valgte kursus?" },
+            { x => x.ButtonText, "Skift" },
+        };
+
+            var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
+            var result = await dialog.Result;
+
+            if (result is null || result.Canceled)
+            {
+                return; // User chose to stay, keep the same course.
+            }
+        }
+
+        if (EditableCourse is null)
+        {
+            EditableCourse = new Course();
+        }
+
+        // Set selected course and tempDate values
+        CopyCourseProperties(course, EditableCourse);
+        SelectedCourse = course;
+        IsEditing = false;  // Reset edit mode after switching
+    }
+
+    private void CopyCourseProperties(Course source, Course target)
+    {
+        target.CourseId = source.CourseId;
+        target.ModuleId = source.ModuleId;
+        target.StartDate = source.StartDate;
+        target.EndDate = source.EndDate;
+        target.CourseType = source.CourseType;
+
+        tempStartDate = source.StartDate;
+        tempEndDate = source.EndDate;
+    }
+
+    private bool CompareTempDates()
+    {
+        if (ObjectComparisonService.AreSimplePropertiesDifferent(tempStartDate, SelectedCourse?.StartDate)
+        || ObjectComparisonService.AreSimplePropertiesDifferent(tempEndDate, SelectedCourse?.EndDate))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+}

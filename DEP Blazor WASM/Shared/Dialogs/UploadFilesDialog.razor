@@ -1,0 +1,211 @@
+﻿@inject ISnackbar Snackbar
+@inject IFileService fileService
+@inject IFileTagService fileTagService
+@using System.Text.Json
+
+<MudStack Style="width: 100%">
+
+    @* Blazor doesn't support if files are added in multiple batches, fix is to hide old input use a new file input and append files. *@
+    @for (int i = 0; i < fileUploadCount; i++)
+    {
+        <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                       OnFilesChanged="@(e => OnInputFileChanged(e, i))"
+                       AppendMultipleFiles="true"
+                       Hidden="false"
+                       Style="@(i == fileUploadCount - 1 ? "" : "display:none;")"
+                       InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
+                       InputStyle="opacity:0"
+                       tabindex="-1"
+                       @ondrop="ClearDragClass"
+                       @ondragenter="SetDragClass"
+                       @ondragleave="ClearDragClass"
+                       @ondragend="ClearDragClass">
+            <ActivatorContent>
+                <MudPaper Height="300px"
+                          Outlined="true"
+                          Class="@_dragClass">
+                    <MudText Typo="Typo.h6">
+                        Træk og slip filer her eller klik
+                    </MudText>
+                </MudPaper>
+            </ActivatorContent>
+        </MudFileUpload>
+    }
+
+    @if (_fileNames.Count > 0)
+    {
+        <MudSimpleTable Style="overflow-x: auto; max-height: 400px" Dense="true" Bordered="true" FixedHeader="true">
+            <thead>
+                <tr>
+                    <th>Filnavn</th>
+                    <th>Filkategori</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < _fileNames.Count; i++)
+                {
+                    var localIndex = i;
+                    <!-- Create a local copy of the index -->
+                    <tr>
+                        <td style="max-width: 300px">@_fileNames[i]</td>
+                        <td>
+                            <MudSelect Style="min-width: 150px;" Margin="Margin.Dense" Dense="true" T="FileTagViewModel" Variant="Variant.Outlined" Label="Vælg Filkategori"
+                                       Value="fileTags[localIndex]"
+                                       ValueChanged="@((value) => OnFileTagChanged(value, localIndex))">
+                                <MudSelectItem T="FileTagViewModel" Value="null">Ingen filkategori</MudSelectItem>
+                                @foreach (var tag in dropdownFileTags)
+                                {
+                                    <MudSelectItem T="FileTagViewModel" Value="@tag">@tag.TagName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    }
+    <MudToolBar Gutters="@true"
+                Class="relative d-flex justify-space-evenly gap-4">
+        <MudButton Color="Color.Primary"
+                   Disabled="@(!_fileNames.Any())"
+                   OnClick="@UploadFiles"
+                   Variant="Variant.Filled">
+            Opload
+        </MudButton>
+        <MudButton Color="Color.Error"
+                   Disabled="@(!_fileNames.Any())"
+                   OnClick="@ClearAsync"
+                   Variant="Variant.Filled">
+            Ryd
+        </MudButton>
+    </MudToolBar>
+</MudStack>
+@code {
+#nullable enable
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mud-width-full mud-height-full";
+    private string _dragClass = DefaultDragClass;
+    private readonly List<string> _fileNames = new();
+    private MudFileUpload<IReadOnlyList<IBrowserFile>>? _fileUpload;
+
+    private IList<IBrowserFile> selectedFiles = new List<IBrowserFile>();
+    private List<FileTagViewModel> fileTags = new(); // The filetags that are going to be bound to the files.
+    private List<FileTagViewModel> dropdownFileTags = new(); // Used to display in the dropdown
+    [Parameter] public int PersonId { get; set; }
+    [Parameter] public List<File>? PersonFiles { get; set; }
+
+
+    private int fileUploadCount = 1; // Initially, we have one active file upload.
+    private List<IBrowserFile> allFiles = new();
+
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        dropdownFileTags = await fileTagService.GetAllFileTagsAsync();
+    }
+
+    private void OnFileTagChanged(FileTagViewModel? fileTag, int index)
+    {
+        if (fileTag == null)
+        {
+            fileTags[index] = null; // Handle null values for "None" option
+        }
+        else
+        {
+            fileTags[index] = fileTag; // Update the correct index
+        }
+    }
+
+    private async Task ClearAsync()
+    {
+        await (_fileUpload?.ClearAsync() ?? Task.CompletedTask);
+        _fileNames.Clear();
+        fileTags.Clear();
+        selectedFiles.Clear();
+        ClearDragClass();
+    }
+
+    private Task OpenFilePickerAsync()
+        => _fileUpload?.OpenFilePickerAsync() ?? Task.CompletedTask;
+
+    private void OnInputFileChanged(InputFileChangeEventArgs e, int componentIndex)
+    {
+        // Get the newly selected files (for this invocation)
+        var newFiles = e.GetMultipleFiles().ToList();
+
+        // Append each file if not already added (avoid duplicates)
+        foreach (var file in newFiles)
+        {
+            if (!allFiles.Any(f => f.Name == file.Name))
+            {
+                allFiles.Add(file);
+                _fileNames.Add(file.Name);
+                fileTags.Add(null); // Initialize corresponding file tag (or set default)
+            }
+        }
+
+        // Increment fileUploadCount to render a new MudFileUpload for subsequent selections.
+        fileUploadCount++;
+    }
+
+
+
+    private async Task UploadFiles()
+    {
+        if (allFiles == null || !allFiles.Any())
+        {
+            Snackbar.Add("Please select at least one file.", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            var content = new MultipartFormDataContent();
+
+            // Add files to the form data using allFiles
+            foreach (var file in allFiles)
+            {
+                var fileStream = file.OpenReadStream();
+                var streamContent = new StreamContent(fileStream);
+                streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                content.Add(streamContent, "files", file.Name);
+            }
+
+            // Add additional form data
+            content.Add(new StringContent(PersonId.ToString()), "personId");
+            content.Add(new StringContent(System.Text.Json.JsonSerializer.Serialize(fileTags)), "fileTags");
+
+            // Send the request
+            var uploadedFiles = await fileService.UploadFilesAsync(content);
+
+            if (uploadedFiles != null && uploadedFiles.Any())
+            {
+                foreach (var uploadedFile in uploadedFiles)
+                {
+                    PersonFiles.Add(uploadedFile);  // Add the file to the table
+                }
+                Snackbar.Add("Files uploaded successfully!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("File upload failed or no files returned.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An error occurred: {ex.Message}", Severity.Error);
+        }
+
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+
+    private void SetDragClass()
+        => _dragClass = $"{DefaultDragClass} mud-border-primary";
+
+    private void ClearDragClass()
+        => _dragClass = DefaultDragClass;
+}

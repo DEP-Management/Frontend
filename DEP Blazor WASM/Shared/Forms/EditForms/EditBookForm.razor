@@ -1,0 +1,305 @@
+﻿@using System.Reflection
+
+@inject ISnackbar Snackbar
+@inject IBookService BookService
+@inject IDialogService DialogService
+@inject IModuleService ModuleService
+@inject IObjectComparisonService ObjectComparisonService
+
+<MudGrid Spacing="0">
+    @* Table *@
+    <MudItem xs="12" md="@GetTableWidth()">
+        <GenericDataTable Height="calc(100vh - 236px)"
+        TItem="Book"
+        Items="@Books"
+        TableTitle="Klik på en Bog"
+        Filter="FilterFunc"
+        RowsPerPage="20"
+        OnRowClick="RowClicked">
+            <HeaderTemplate>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Book, object>(x => x.Name)">
+                        Navn
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Book, object>(x => x.Module?.Name!)">
+                        Modul
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Book, object>(x => x.Amount)">
+                        Antal
+                    </MudTableSortLabel>
+                </MudTh>
+            </HeaderTemplate>
+            <RowTemplate Context="book">
+                <MudTd Class="cursor-pointer" title="@book.Name">@book.Name</MudTd>
+                <MudTd Class="cursor-pointer" title="@book.Module?.Name">@book.Module?.Name</MudTd>
+                <MudTd Class="cursor-pointer" title="@book.Amount">@book.Amount</MudTd>
+            </RowTemplate>
+        </GenericDataTable>
+    </MudItem>
+
+    @* Edit form *@
+    @if (SelectedBook is not null)
+    {
+        <MudItem xs="4" md="3" lg="3" Class="scrollable-tab-container">
+            <MudCard Class="pa-4 mb-4" Elevation="0">
+                <MudForm Model="EditableBook" @ref="form" @bind-IsValid="@success">
+                    <MudGrid Spacing="2" Class="px-2 d-flex justify-center">
+
+                        <!-- Book Name Input -->
+                        <MudItem xs="12">
+                            <MudTextField T="string"
+                            Label="Navn"
+                            @bind-Value="EditableBook!.Name"
+                            Variant="Variant.Outlined"
+                            Immediate="true"
+                            Required="true"
+                            RequiredError="Navn er påkrævet."
+                            Disabled="!IsEditing" />
+                        </MudItem>
+
+                        <!-- Book Module Dropdown -->
+                        <MudItem xs="12" md="10" lg="12">
+                            <MudSelect T="int"
+                            Label="Modul"
+                            Variant="Variant.Outlined"
+                            Disabled="!IsEditing"
+                            @bind-Value="EditableBook!.ModuleId">
+                                @foreach (var module in Modules)
+                                {
+                                    <MudSelectItem T="int" Value="module.ModuleId">@module.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <!-- Book Amount Input -->
+                        <MudItem xs="12">
+                            <MudNumericField Label="Antal"
+                            Variant="Variant.Outlined"
+                            @bind-Value="EditableBook!.Amount"
+                            Min="0"
+                            Immediate="true"
+                            Required="true"
+                            Disabled="!IsEditing"
+                            RequiredError="Antal er påkrævet" />
+                        </MudItem>
+
+
+                        <!-- Submit Button Row -->
+                        <MudItem xs="12">
+                            <MudCardActions Class="d-flex justify-space-evenly">
+                                @if (!IsEditing)
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Error"
+                                    OnClick="DeleteBook">
+                                        Slet
+                                    </MudButton>
+
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Primary"
+                                    OnClick="EnterEditMode">
+                                        Rediger
+                                    </MudButton>
+                                }
+                                else
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Surface"
+                                    OnClick="CancelEdit">
+                                        Annuller
+                                    </MudButton>
+
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Primary"
+                                    OnClick="SaveChanges"
+                                    Disabled="!success">
+                                        Gem
+                                    </MudButton>
+                                }
+                            </MudCardActions>
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            </MudCard>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    private bool success;
+    private MudForm form = new();
+
+    private bool IsEditing { get; set; } = false;
+
+    private Book? SelectedBook { get; set; }
+    private Book? EditableBook { get; set; }
+
+    // Dropdown data
+    private List<Entities.Models.Module> Modules { get; set; } = new();
+    private List<Book> Books { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Books = await BookService.GetBooksAsync();
+        Modules = await ModuleService.GetModulesAsync();
+    }
+
+    private async Task SaveChanges()
+    {
+        await form.Validate();
+        if (!form.IsValid || EditableBook is null)
+        {
+            return;
+        }
+
+        var result = await BookService.UpdateBookAsync(EditableBook);
+        if (result)
+        {
+            CopyBookProperties(EditableBook, SelectedBook!);
+            int index = Books.FindIndex(d => d.BookId == EditableBook.BookId);
+            if (index != -1)
+            {
+                SetTableDisplayObjects();
+                // Replace the location in the list
+                Books[index] = SelectedBook!;
+            }
+            IsEditing = false;
+            Snackbar.Add("Bogen blev opdateret.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Bogen kunnne ikke opdateres", Severity.Error);
+        }
+    }
+
+    private void SetTableDisplayObjects()
+    {
+        if (EditableBook is null || SelectedBook is null)
+        {
+            return;
+        }
+
+        // Needed to display the updated names in the table.
+        SelectedBook.Module = Modules.FirstOrDefault(d => d.ModuleId == EditableBook.ModuleId);
+    }
+
+    private async Task DeleteBook()
+    {
+        if (SelectedBook is null || EditableBook is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { x => x.Color, Color.Error },
+            { x => x.ContentText, $"Er du sikker på at du vil slette den valgte Bog: {EditableBook.Name}?" },
+            { x => x.ButtonText, "Slet" },
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
+        var dialogResult = await dialog.Result;
+
+        if (dialogResult is null || dialogResult.Canceled)
+        {
+            return; // User chose to not delete
+        }
+
+        bool deleteResult = await BookService.DeleteBookAsync(SelectedBook.BookId);
+        if (deleteResult)
+        {
+            Books.RemoveAll(d => d.BookId == SelectedBook.BookId);
+            SelectedBook = null;
+            EditableBook = null;
+            StateHasChanged();
+            Snackbar.Add("Bogen blev slettet.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Bogen kunne ikke slettes", Severity.Error);
+        }
+    }
+
+    private void EnterEditMode()
+    {
+        IsEditing = true;
+    }
+
+    private void CancelEdit()
+    {
+        IsEditing = false;
+
+        // Restore original values by re-initializing EditableLocation
+        if (SelectedBook is not null && EditableBook is not null)
+        {
+            CopyBookProperties(SelectedBook, EditableBook);
+        }
+
+        // Reset validation
+        form.ResetValidation();
+    }
+
+    // Methods for the table appearance and functionality
+    private int GetTableWidth()
+    {
+        return SelectedBook is not null ? 9 : 12;
+    }
+
+    // Filter function to allow searching for properties in GenericDataTable component.
+    private bool FilterFunc(Book item, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        return item.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task RowClicked(Book book)
+    {
+        // Check if user is in editmode and has changed any values
+        if (IsEditing && EditableBook != null && ObjectComparisonService.AreSimplePropertiesDifferent(EditableBook, SelectedBook))
+        {
+            var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { x => x.Color, Color.Error },
+            { x => x.ContentText, "Du har ændringer, som ikke er blevet gemt. Vil du opgive de nuværende ændringer og skifte til den valgte bog?" },
+            { x => x.ButtonText, "Skift" },
+        };
+
+            var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
+            var result = await dialog.Result;
+
+            if (result is null || result.Canceled)
+            {
+                return; // User chose to stay, keep the same location.
+            }
+        }
+
+        if (EditableBook is null)
+        {
+            EditableBook = new Book();
+        }
+
+        // Set selected location
+        CopyBookProperties(book, EditableBook);
+        SelectedBook = book;
+        IsEditing = false;  // Reset edit mode after switching
+    }
+
+    private void CopyBookProperties(Book source, Book target)
+    {
+        if (source is null || target is null)
+        {
+            return;
+        }
+
+        target.BookId = source.BookId;
+        target.Name = source.Name;
+        target.Amount = source.Amount;
+        target.ModuleId = source.ModuleId;
+    }
+
+}

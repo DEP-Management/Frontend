@@ -1,0 +1,176 @@
+﻿@using MudBlazor
+@using DEP_Blazor_WASM.Entities.Models
+@using DEP_Blazor_WASM.Services.Interfaces
+
+<MudContainer>
+    @if (ShowSecondViewSwitch)
+    {
+        <MudSwitch Color="Color.Primary" ValueChanged="ChangeView" Value="SecondViewSelected" T="bool"
+                   Label="Vis fra uddannelsesleder" Class="mb-3" />
+    }
+    @if (ShowCourseTypeFilter)
+    {
+        <MudItem Class="mb-3">
+            <MudSelect T="CourseType?" Label="Kursustype" Variant="Variant.Outlined" MultiSelection="true" SelectAll="true" @bind-SelectedValues="SelectedCourseTypes" FullWidth="false"
+                       MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                @foreach (var courseType in Enum.GetValues<CourseType>())
+                {
+                    <MudSelectItem T="CourseType?" Value="@courseType">@courseType.ToString()</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    }
+    @if (ShowDepartmentFilter)
+    {
+        <MudItem Class="mb-3">
+            <MudSelect T="Department" Label="Afdelinger" Variant="Variant.Outlined" SelectAll="true" MultiSelection="true" @bind-SelectedValues="SelectedDepartments" FullWidth="false"
+            MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                @foreach (var department in Departments)
+                {
+                    <MudSelectItem T="Department" Value="@department">@department.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    }
+    @if (ShowLocationFilter)
+    {
+        <MudItem Class="mb-3">
+            <MudSelect T="Location" Label="Lokationer" Variant="Variant.Outlined" SelectAll="true" MultiSelection="true" @bind-SelectedValues="SelectedLocations" FullWidth="false"
+            MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                @foreach (var location in Locations)
+                {
+                    <MudSelectItem T="Location" Value="@location">@location.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    }
+    @if (ShowOperationCoordinatorFilter)
+    {
+        <MudItem Class="mb-3">
+            <MudSelect T="User" Label="Driftskoordinator" Variant="Variant.Outlined" SelectAll="true" MultiSelection="true" @bind-SelectedValues="SelectedOperationCoordinators" FullWidth="false"
+            MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                @foreach (var coordinator in OperationCoordinators)
+                {
+                    <MudSelectItem T="User" Value="@coordinator">@coordinator.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    }
+    @if (ShowEducationalConsultantFilter)
+    {
+        <MudItem Class="mb-3">
+            <MudSelect T="User" Label="Pædagogisk Konsulent" Variant="Variant.Outlined" SelectAll="true" MultiSelection="true" @bind-SelectedValues="SelectedEducationalConsultants" FullWidth="false"
+            MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                @foreach (var consultant in EducationalConsultants)
+                {
+                    <MudSelectItem T="User" Value="@consultant">@consultant.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    }
+    @if (ShowFileTagFilter)
+    {
+        <MudItem Class="mb-3">
+            <MudSelect T="FileTagViewModel" Label="Filkategori" Variant="Variant.Outlined" SelectAll="true" MultiSelection="true" @bind-SelectedValues="SelectedFileTags" FullWidth="false"
+            MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                @foreach (var tag in FileTags)
+                {
+                    <MudSelectItem T="FileTagViewModel" Value="@tag">@tag.TagName</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    }
+    @if (ShowStatusFilter)
+    {
+        <MudItem Class="mb-3">
+            <MudSelect T="Status?" Label="Status" Variant="Variant.Outlined" MultiSelection="true" SelectAll="true" @bind-SelectedValues="SelectedStatuses" FullWidth="false"
+            MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                @foreach (var status in Enum.GetValues<Status>())
+                {
+                    <MudSelectItem T="Status?" Value="@status">@status.ToString().Replace('_', ' ')</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    }
+    
+    
+
+    <MudItem Class="d-flex justify-space-between">
+        <MudButton OnClick="UpdateFilters" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">Anvend Filter</MudButton>
+        <MudButton OnClick="ClearFilters" Size="Size.Small" Color="Color.Surface" Variant="Variant.Filled">Fjern Filter</MudButton>
+    </MudItem>
+</MudContainer>
+
+@code {
+
+
+    [Parameter] public bool ShowDepartmentFilter { get; set; } = false;
+    [Parameter] public bool ShowLocationFilter { get; set; } = false;
+    [Parameter] public bool ShowOperationCoordinatorFilter { get; set; } = false;
+    [Parameter] public bool ShowEducationalConsultantFilter { get; set; } = false;
+    [Parameter] public bool ShowFileTagFilter { get; set; } = false;
+    [Parameter] public bool ShowStatusFilter { get; set; } = false;
+    [Parameter] public bool ShowSecondViewSwitch { get; set; } = false;
+    [Parameter] public bool ShowCourseTypeFilter { get; set; } = false;
+    [Parameter] public List<Department> Departments { get; set; } = new();
+    [Parameter] public List<Location> Locations { get; set; } = new();
+    [Parameter] public List<User> OperationCoordinators { get; set; } = new();
+    [Parameter] public List<User> EducationalConsultants { get; set; } = new();
+    [Parameter] public List<FileTagViewModel> FileTags { get; set; } = new();
+    [Parameter] public EventCallback<IEnumerable<Department>> SelectedDepartmentsChanged { get; set; }
+    [Parameter] public EventCallback<IEnumerable<Location>> SelectedLocationsChanged { get; set; }
+    [Parameter] public EventCallback<IEnumerable<User>> SelectedOperationCoordinatorsChanged { get; set; }
+    [Parameter] public EventCallback<IEnumerable<User>> SelectedEducationalConsultantsChanged { get; set; }
+    [Parameter] public EventCallback<IEnumerable<FileTagViewModel>> SelectedFileTagsChanged { get; set; }
+    [Parameter] public EventCallback<IEnumerable<Status?>> SelectedStatusesChanged { get; set; }
+    [Parameter] public EventCallback<IEnumerable<CourseType?>> SelectedCourseTypesChanged { get; set; }
+    [Parameter] public EventCallback<bool> SecondViewSelectionChanged { get; set; }
+
+    private bool SecondViewSelected { get; set; } = false;
+    private IEnumerable<Department> SelectedDepartments { get; set; } = new List<Department>();
+    private IEnumerable<Location> SelectedLocations { get; set; } = new List<Location>();
+    private IEnumerable<User> SelectedOperationCoordinators { get; set; } = new List<User>();
+    private IEnumerable<User> SelectedEducationalConsultants { get; set; } = new List<User>();
+    private IEnumerable<FileTagViewModel> SelectedFileTags { get; set; } = new List<FileTagViewModel>();
+    private IEnumerable<Status?> SelectedStatuses { get; set; } = new List<Status?>();
+    private IEnumerable<CourseType?> SelectedCourseTypes { get; set; } = new List<CourseType?>();
+
+    private async Task ChangeView(bool isChecked)
+    {
+        SecondViewSelected = isChecked;
+        await SecondViewSelectionChanged.InvokeAsync(isChecked);
+    }
+
+    private void ClearFilters()
+    {
+        SelectedDepartments = new List<Department>();
+        SelectedLocations = new List<Location>();
+        SelectedOperationCoordinators = new List<User>();
+        SelectedEducationalConsultants = new List<User>();
+        SelectedFileTags = new List<FileTagViewModel>();
+        SelectedStatuses = new List<Status?>();
+        SelectedCourseTypes = new List<CourseType?>();
+        UpdateFilters();
+    }
+
+    private void UpdateFilters()
+    {
+        SelectedDepartmentsChanged.InvokeAsync(SelectedDepartments);
+        SelectedLocationsChanged.InvokeAsync(SelectedLocations);
+        SelectedOperationCoordinatorsChanged.InvokeAsync(SelectedOperationCoordinators);
+        SelectedEducationalConsultantsChanged.InvokeAsync(SelectedEducationalConsultants);
+        SelectedFileTagsChanged.InvokeAsync(SelectedFileTags);
+        SelectedStatusesChanged.InvokeAsync(SelectedStatuses);
+        SelectedCourseTypesChanged.InvokeAsync(SelectedCourseTypes);
+    }
+
+    private string GetMultiSelectionText(List<string> selectedValues)
+    {
+        if (selectedValues.Count == 0)
+        {
+            return string.Empty; // Label gets displayed if an empty string is returned
+        }
+
+        return $"{selectedValues.Count} valgt";
+    }
+}

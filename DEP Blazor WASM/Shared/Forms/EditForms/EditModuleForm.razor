@@ -1,0 +1,258 @@
+﻿@inject ISnackbar Snackbar
+@inject IModuleService ModuleService
+@inject IDialogService DialogService
+@inject IObjectComparisonService ObjectComparisonService
+
+<MudGrid Spacing="0">
+    @* Table *@
+    <MudItem xs="12" md="@GetTableWidth()">
+        <GenericDataTable Height="calc(100vh - 236px)"
+                          TItem="Module"
+                          Items="@Modules"
+                          TableTitle="Klik på et Modul"
+                          RowsPerPage="20"
+                          OnRowClick="RowClicked">
+            <HeaderTemplate>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Module, object>(x => x.Name)">
+                        Modul
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Module, object>(x => x.Description)">
+                        Beskrivelse
+                    </MudTableSortLabel>
+                </MudTh>
+            </HeaderTemplate>
+            <RowTemplate Context="module">
+                <MudTd Class="cursor-pointer" title="@module.Name">@module.Name</MudTd>
+                <MudTd Class="cursor-pointer">@module.Description</MudTd>
+            </RowTemplate>
+        </GenericDataTable>
+    </MudItem>
+
+    @* Edit form *@
+    @if (SelectedModule is not null)
+    {
+        <MudItem xs="4" md="3" lg="3" Class="scrollable-tab-container">
+            <MudCard Class="pa-4 mb-4" Elevation="0">
+                <MudForm Model="EditableModule" @ref="form" @bind-IsValid="@success">
+                    <MudGrid Spacing="2" Class="px-2 d-flex justify-center">
+
+                        <!-- CourseType Dropdown -->
+                        <MudItem xs="12">
+                            <MudTextField T="string"
+                                          Label="Navn"
+                                          Required="true"
+                                          Immediate="true"
+                                          Disabled="!IsEditing"
+                                          Variant="Variant.Outlined"
+                                          @bind-Value="EditableModule!.Name"
+                                          RequiredError="Navn på modulet er påkrævet." />
+                        </MudItem>
+
+                        <!-- Start Date Input -->
+                        <MudItem xs="12">
+                            <MudTextField Lines="1"
+                                          T="string"
+                                          AutoGrow="true"
+                                          Immediate="true"
+                                          Label="Beskrivelse"
+                                          Disabled="!IsEditing"
+                                          Variant="Variant.Outlined"
+                                          @bind-Value="EditableModule!.Description" />
+                        </MudItem>
+
+
+                        <!-- Submit Button Row -->
+                        <MudItem xs="12">
+                            <MudCardActions Class="d-flex justify-space-evenly">
+                                @if (!IsEditing)
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Error"
+                                               OnClick="DeleteModule">
+                                        Slet
+                                    </MudButton>
+
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Primary"
+                                               OnClick="EnterEditMode">
+                                        Rediger
+                                    </MudButton>
+                                }
+                                else
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Surface"
+                                               OnClick="CancelEdit">
+                                        Annuller
+                                    </MudButton>
+
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Primary"
+                                               OnClick="SaveChanges"
+                                               Disabled="!success">
+                                        Gem
+                                    </MudButton>
+                                }
+                            </MudCardActions>
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            </MudCard>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    private bool success;
+    private MudForm form = new();
+
+    private bool IsEditing { get; set; } = false;
+
+    private Module? SelectedModule { get; set; }
+    private Module? EditableModule { get; set; }
+
+    private List<Module> Modules { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Modules = await ModuleService.GetModulesAsync();
+    }
+
+    private async Task SaveChanges()
+    {
+        await form.Validate();
+        if (!form.IsValid || EditableModule is null)
+        {
+            return;
+        }
+
+        var result = await ModuleService.UpdateModuleAsync(EditableModule);
+        if (result)
+        {
+
+            CopyModuleProperties(EditableModule, SelectedModule!);
+            int index = Modules.FindIndex(d => d.ModuleId == EditableModule.ModuleId);
+            if (index != -1)
+            {
+                // Replace the location in the list
+                Modules[index] = SelectedModule!;
+            }
+            IsEditing = false;
+            Snackbar.Add("Modulet er opdateret.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Modulet kunnne ikke opdateres", Severity.Error);
+        }
+    }
+
+    private async Task DeleteModule()
+    {
+        if (SelectedModule is null || EditableModule is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { x => x.Color, Color.Error },
+            { x => x.ContentText, $"Er du sikker på at du vil slette det valgte Modul?" },
+            { x => x.ButtonText, "Slet" },
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
+        var dialogResult = await dialog.Result;
+
+        if (dialogResult is null || dialogResult.Canceled)
+        {
+            return; // User chose to not delete
+        }
+
+        bool deleteResult = await ModuleService.DeleteModuleAsync(SelectedModule.ModuleId);
+        if (deleteResult)
+        {
+            Modules.RemoveAll(d => d.ModuleId == SelectedModule.ModuleId);
+            SelectedModule = null;
+            EditableModule = null;
+            StateHasChanged();
+            Snackbar.Add("Modulet blev slettet.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Modulet kunne ikke slettes", Severity.Error);
+        }
+    }
+
+    private void EnterEditMode()
+    {
+        IsEditing = true;
+    }
+
+    private void CancelEdit()
+    {
+        IsEditing = false;
+
+        // Restore original values by re-initializing EditableLocation
+        if (SelectedModule is not null && EditableModule is not null)
+        {
+            CopyModuleProperties(SelectedModule, EditableModule);
+        }
+
+        // Reset validation
+        form.ResetValidation();
+    }
+
+    // Methods for the table appearance and functionality
+    private int GetTableWidth()
+    {
+        return SelectedModule is not null ? 9 : 12;
+    }
+
+    private async Task RowClicked(Module module)
+    {
+        // Check if user is in editmode and has changed any values
+        if (IsEditing && EditableModule != null && ObjectComparisonService.AreSimplePropertiesDifferent(EditableModule, SelectedModule))
+        {
+            var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { x => x.Color, Color.Error },
+            { x => x.ContentText, "Du har ændringer, som ikke er blevet gemt. Vil du opgive de nuværende ændringer og skifte til det valgte modul?" },
+            { x => x.ButtonText, "Skift" },
+        };
+
+            var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
+            var result = await dialog.Result;
+
+            if (result is null || result.Canceled)
+            {
+                return; // User chose to stay, keep the same course.
+            }
+        }
+
+
+        if (EditableModule is null)
+        {
+            EditableModule = new Module();
+        }
+
+        // Copy properties to EditableModule to avoid sharing references
+        CopyModuleProperties(module, EditableModule);
+        SelectedModule = module;
+        IsEditing = false;  // Reset edit mode after switching
+    }
+
+    private void CopyModuleProperties(Module source, Module target)
+    {
+        if (source is null || target is null)
+        {
+            return;
+        }
+        target.ModuleId = source.ModuleId;
+        target.Name = source.Name;
+        target.Description = source.Description;
+    }
+
+}

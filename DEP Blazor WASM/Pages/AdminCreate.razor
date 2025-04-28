@@ -1,0 +1,54 @@
+﻿@page "/admin-opret"
+
+@* <MudContainer Class="mt-16 px-8 d-flex justify-center" MaxWidth="MaxWidth.Large">
+    <MudItem xs="12" sm="12" md="12" lg="12" Class="d-flex justify-center"> *@
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-0">
+    <MudItem xs="12" sm="12" md="12" lg="12">
+        <MudTabs Border="true" Centered="true" Elevation="2" Outlined="true">
+            <MudTabPanel Text="Afdeling">
+                <MudPaper Class="px-4">
+                    <AddDepartmentForm />
+                </MudPaper>
+            </MudTabPanel>
+            <MudTabPanel Text="Bruger">
+                <MudPaper Class="px-4">
+                    <AddUserForm />
+                </MudPaper>
+            </MudTabPanel>
+            <MudTabPanel Text="Bøger">
+                <MudPaper Class="px-4">
+                    <AddBookForm />
+                </MudPaper>
+            </MudTabPanel>
+            <MudTabPanel Text="Filkategori">
+                <MudPaper Class="px-4">
+                    <AddFileTagForm />
+                </MudPaper>
+            </MudTabPanel>
+            <MudTabPanel Text="Kursus">
+                <MudPaper Class="px-4">
+                    <AddCourseForm />
+                </MudPaper>
+            </MudTabPanel>
+            <MudTabPanel Text="Lokation">
+                <MudPaper Class="px-4">
+                    <AddLocationForm />
+                </MudPaper>
+            </MudTabPanel>
+            <MudTabPanel Text="Modul">
+                <MudPaper Class="px-4">
+                    <AddModuleForm />
+                </MudPaper>
+            </MudTabPanel>
+            <MudTabPanel Text="Underviser">
+                <MudPaper Class="px-4">
+                    <AddTeacherForm />
+                </MudPaper>
+            </MudTabPanel>
+        </MudTabs>
+    </MudItem>
+</MudContainer>
+
+@code {
+
+}

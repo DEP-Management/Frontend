@@ -1,0 +1,83 @@
+﻿@typeparam TItem
+
+<MudTable
+    RowsPerPage="@RowsPerPage" AllowUnsorted="false" Height="@Height" Items="@FilteredItems" Dense="@Dense" 
+    Hover="@Hover" Bordered="@Bordered" Striped="@Striped" FixedHeader="true" Outlined="@Outlined" Style="width: 100%;" T="TItem" OnRowClick="RowClicked">
+
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">@TableTitle</MudText>
+        <MudSpacer />
+        @if (EnableSearch)
+        {
+            <MudTextField @bind-Value="SearchString" Placeholder="Search" Adornment="Adornment.Start"
+            AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"
+            />
+        }
+    </ToolBarContent>
+    <HeaderContent>
+        @if (HeaderTemplate != null)
+        {
+            @HeaderTemplate
+        }
+        else
+        {
+            <MudTh>No columns specified</MudTh>
+        }
+    </HeaderContent>
+    <RowTemplate>
+        @if (RowTemplate != null)
+        {
+            @RowTemplate(context)
+        }
+        else
+        {
+            <MudTd>No row template specified</MudTd>
+        }
+    </RowTemplate>
+
+    <ChildRowContent>
+        @if (ChildRowTemplate != null)
+        {
+            @ChildRowTemplate(context)
+        }
+    </ChildRowContent>
+
+    <PagerContent>
+        <MudTablePager
+        InfoFormat="@infoFormat"
+        RowsPerPageString="@rowsPerPageString"
+        />
+    </PagerContent>
+</MudTable>
+
+@code {
+    [Parameter] public IEnumerable<TItem>? Items { get; set; }
+    [Parameter] public RenderFragment? HeaderTemplate { get; set; } // Headers are defined on the pages where the component is used
+    [Parameter] public RenderFragment<TItem>? RowTemplate { get; set; } // Rows are defined on the pages where the component is used
+    [Parameter] public RenderFragment<TItem>? ChildRowTemplate { get; set; }
+    [Parameter] public string TableTitle { get; set; } = "";
+    [Parameter] public bool Dense { get; set; } = true;
+    [Parameter] public bool Hover { get; set; } = true;
+    [Parameter] public bool Bordered { get; set; } = true;
+    [Parameter] public bool Striped { get; set; } = true;
+    [Parameter] public bool EnableSearch { get; set; } = true;
+    [Parameter] public bool Outlined { get; set; } = true;
+    [Parameter] public string SearchString { get; set; } = string.Empty;
+    [Parameter] public string Height { get; set; } = string.Empty;
+    [Parameter] public int RowsPerPage { get; set; } = 25;
+    [Parameter] public Func<TItem, string, bool>? Filter { get; set; }
+
+    [Parameter] public EventCallback<TItem> OnRowClick { get; set; }  // EventCallback for handling row click
+
+    private string infoFormat = "{first_item}-{last_item} af {all_items}";
+    private string rowsPerPageString = "Visninger per side:";
+
+    private IEnumerable<TItem> FilteredItems => string.IsNullOrWhiteSpace(SearchString) || Filter == null
+        ? Items
+        : Items.Where(item => Filter(item, SearchString));
+
+    private Task RowClicked(TableRowClickEventArgs<TItem> args)
+    {
+        return OnRowClick.InvokeAsync(args.Item);  // Invoke the callback with the selected item
+    }
+}

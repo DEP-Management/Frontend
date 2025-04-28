@@ -1,0 +1,217 @@
+﻿@inject IDepartmentService DepartmentService
+@inject ILocationService LocationService
+@inject IUserService UserService
+@inject IPersonService PersonService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<MudCard Class="pa-4 mb-4" Elevation="0">
+    <MudForm Model="NewPerson" @ref="form" @bind-IsValid="@success">
+        <MudGrid Spacing="2" Class="px-2">
+            <!-- Personal Information -->
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2">Personlige Oplysninger</MudText>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudTextField InputType="InputType.Text" Label="Navn"
+                              Variant="Variant.Outlined"
+                              @bind-Value="NewPerson.Name"
+                              Immediate="true"
+                              Required
+                              RequiredError="Navn er påkrævet" />
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudTextField InputType="InputType.Text" Label="Initialer"
+                              Variant="Variant.Outlined"
+                              @bind-Value="NewPerson.Initials"
+                              Required
+                              RequiredError="Initialer er påkrævet" />
+            </MudItem>
+
+            <!-- Organizational Details -->
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2">Organisatoriske Oplysninger</MudText>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudSelect T="int?" Label="Afdeling" Variant="Variant.Outlined"
+                           @bind-Value="NewPerson.DepartmentId" Clearable>
+                    @foreach (var dep in Departments)
+                    {
+                        <MudSelectItem T="int?" Value="dep.DepartmentId">@dep.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudSelect T="int?" Label="Lokation" Variant="Variant.Outlined"
+                           @bind-Value="NewPerson.LocationId" Clearable>
+                    @foreach (var location in Locations)
+                    {
+                        <MudSelectItem T="int?" Value="location.LocationId">@location.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <!-- Administrative Association -->
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2">Administrativ Tilknytning</MudText>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudSelect T="int?" Label="Pædagogisk Konsulent" Variant="Variant.Outlined"
+                           @bind-Value="NewPerson.EducationalConsultantId" Clearable>
+                    @foreach (var pk in AdministrativeUsers.Where(x => x.UserRole == UserRole.Pædagogisk_konsulent))
+                    {
+                        <MudSelectItem T="int?" Value="pk.UserId">@pk.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudSelect T="int?" Label="Driftskoordinator" Variant="Variant.Outlined"
+                           @bind-Value="NewPerson.OperationCoordinatorId" Clearable>
+                    @foreach (var pk in AdministrativeUsers.Where(x => x.UserRole == UserRole.Driftskoordinator))
+                    {
+                        <MudSelectItem T="int?" Value="pk.UserId">@pk.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudSelect T="int?" Label="Uddannelsesleder" Variant="Variant.Outlined"
+                           @bind-Value="NewPerson.EducationalLeaderId" Clearable>
+                    @foreach (var pk in AdministrativeUsers.Where(x => x.UserRole == UserRole.Uddannelsesleder))
+                    {
+                        <MudSelectItem T="int?" Value="pk.UserId">@pk.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudFlexBreak />
+
+            <!-- Start Date -->
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2">Start Dato</MudText>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudDatePicker Label="Start Dato" Variant="Variant.Outlined"
+                               @bind-Date="tempStartDate"
+                               Required
+                               RequiredError="Start Dato er påkrævet" />
+            </MudItem>
+
+            <!-- SVU Eligibility -->
+            <MudItem xs="6" class="d-flex justify-space-around">
+                <MudSwitch Label="SVU Berettiget" @bind-Value="NewPerson.SvuEligible" Color="Color.Primary" />
+                <MudSwitch Label="SVU Søgt" @bind-Value="NewPerson.SvuApplied" Color="Color.Primary" />
+            </MudItem>
+
+            <!-- Submit Button -->
+            <MudItem xs="12">
+                <MudCardActions Class="@CardActionClass">
+                    @if (personAdded is not null)
+                    {
+                        <!-- Invisible button as placeholder -->
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   EndIcon="@Icons.Material.Filled.FollowTheSigns"
+                                   Style="visibility: hidden">
+                            Profil
+                        </MudButton>
+                    }
+
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Disabled="@(!success)"
+                               OnClick="Submit">
+                        Opret
+                    </MudButton>
+
+                    @if (personAdded is not null)
+                    {
+                        <MudTooltip Text="@ProfileTooltip">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       EndIcon="@Icons.Material.Filled.FollowTheSigns"
+                                       OnClick="NavigateToTeacherProfile">
+                                Profil
+                            </MudButton>
+                        </MudTooltip>
+                    }
+                </MudCardActions>
+            </MudItem>
+
+
+        </MudGrid>
+    </MudForm>
+</MudCard>
+
+@code {
+    private bool success;
+    private bool EducationLeaderSelected { get; set; }
+    private MudForm form = new();
+    private Person NewPerson { get; set; } = new();
+    private Person? personAdded { get; set; } = null;
+
+    // Dropdown data
+    private List<Department> Departments { get; set; } = new();
+    private List<User> AdministrativeUsers { get; set; } = new();
+    private List<Location> Locations { get; set; } = new();
+
+    // Temp variables for binding to MudDatePickers as they require nullable datetimes.
+    private DateTime? tempStartDate;
+
+    // Styling for MudCardAction
+    private string CardActionClass => personAdded is not null ? "d-flex justify-space-between" : "d-flex justify-center";
+
+    // Tooltip message
+    private string ProfileTooltip => personAdded is not null
+        ? $"Gå til {personAdded.Name}'s profil"
+        : "Gå til profil.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Departments = await DepartmentService.GetDepartmentsAsync();
+        AdministrativeUsers = await UserService.GetUsersAsync();
+        Locations = await LocationService.GetLocationsAsync();
+    }
+
+    private async Task Submit()
+    {
+        if (tempStartDate is null)
+        {
+            Snackbar.Add("Start dato skal sættes", Severity.Warning);
+            return;
+        }
+
+        NewPerson.HiringDate = tempStartDate.Value;
+
+        var response = await PersonService.AddPersonAsync<Person>(NewPerson);
+
+        if (response.Success)
+        {
+            personAdded = response.Data;
+            Snackbar.Add(response.Message, Severity.Success);
+            await form.ResetAsync();
+        }
+        else
+        {
+            Snackbar.Add(response.Message, Severity.Error);
+            Console.WriteLine(response.Message);
+        }
+    }
+
+    private void NavigateToTeacherProfile()
+    {
+        if (personAdded is null)
+        {
+            Console.WriteLine("Recently added person could not be found");
+            return;
+        }
+
+        NavigationManager.NavigateTo($"/undervisere/profil/{personAdded.PersonId}");
+    }
+}

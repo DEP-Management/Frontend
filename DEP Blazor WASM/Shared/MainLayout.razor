@@ -1,0 +1,96 @@
+﻿@inherits LayoutComponentBase
+
+@inject AppState AppState
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <MudThemeProvider Theme="MyCustomTheme" />
+        <MudPopoverProvider />
+        <MudDialogProvider />
+        <MudSnackbarProvider />
+
+        <MudLayout Class="page">
+            <main>
+                <MudAppBar Elevation="1" Color="Color.Primary">
+                    <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+                    <MudImage Class="pl-4" Src="images/toolbar-logo-dark.png" Height="64" Width="328" Alt="TEC Logo" ObjectFit="ObjectFit.Fill" />
+                </MudAppBar>
+                <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+                    <NavMenu />
+                </MudDrawer>
+                <MudMainContent>
+                    @Body
+                </MudMainContent>
+            </main>
+        </MudLayout>
+
+    </Authorized>
+    <NotAuthorized>
+        <MudThemeProvider Theme="MyCustomTheme" />
+        <MudPopoverProvider />
+        <MudDialogProvider />
+        <MudSnackbarProvider />
+        <div class="page">
+            <main>
+                <Login />
+            </main>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+
+    // [CascadingParameter] IModalService Modal { get; set; } = default!;
+
+    bool _drawerOpen = true;
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    protected override void OnInitialized()
+    {
+        // Subscribe to OnLogout and handle logout when user is forcibly logged out through RefreshAsync in AuthService.
+        AppState.OnLogout += HandleLogout;
+    }
+
+    private async void HandleLogout()
+    {
+        var parameters = new DialogParameters<InformationDialog>
+    {
+        { x => x.ContentText, AppState.LogoutReason ?? "Du er blevet logget ud." },
+        { x => x.ButtonText, "Ok" },
+        { x => x.Color, Color.Primary }
+    };
+
+        var options = new DialogOptions { NoHeader = true };
+
+        var dialog = await DialogService.ShowAsync<InformationDialog>("", parameters, options);
+        var result = await dialog.Result;
+
+        NavigationManager.NavigateTo("/login");
+    }
+
+    public void Dispose()
+    {
+        AppState.OnLogout -= HandleLogout;
+    }
+
+    MudTheme MyCustomTheme = new MudTheme()
+        {
+            PaletteLight = new PaletteLight()
+            {
+                // Primary = "#006E8C"
+                Primary = "#000000"
+            },
+            PaletteDark = new PaletteDark()
+            {
+                Primary = "#006E8C"
+            }
+        };
+}

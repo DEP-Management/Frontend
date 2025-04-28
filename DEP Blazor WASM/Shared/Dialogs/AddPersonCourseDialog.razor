@@ -1,0 +1,150 @@
+﻿@using Course = DEP_Blazor_WASM.Entities.Models.Course;
+@inject IModuleService ModuleService
+@inject IPersonCourseService PersonCourseService
+@inject ISnackbar Snackbar
+
+@if (Person is null)
+{
+    <MudText Typo="Typo.subtitle2">Kunne ikke hente underviseren's data'</MudText>
+}
+else
+{
+
+    <MudDialog Style="width: 100%">
+        <DialogContent>
+
+            @* Module Dropdown *@
+            <MudSelect Class="mb-3" Label="Modul" Placeholder="Vælg modul" Variant="Variant.Outlined" T="ModuleWithCourseViewModel" Immediate="true" Value="SelectedModule" ValueChanged="OnModuleChanged" Required>
+                @foreach (var module in Modules)
+                {
+                    <MudSelectItem T="ModuleWithCourseViewModel" Value="@module">@(module.Name ?? "")</MudSelectItem>
+                }
+            </MudSelect>
+
+            @* Selected Module's Courses Dropdown *@
+            @if (SelectedModule is not null)
+            {
+                <MudSelect Disabled="FilteredCourses.Count == 0 || ModulePassed == true" Class="mb-3" Label="Kursus" Placeholder="Vælg kursus" Variant="Variant.Outlined"
+                           T="Course" Value="SelectedCourse" ValueChanged="OnCourseChanged" Required>
+                    @foreach (var course in FilteredCourses.OrderBy(x => x.CourseType).ThenBy(x => x.StartDate))
+                    {
+                        <MudSelectItem T="Course" Value="@course">
+                            <MudText><b>@course.CourseType.ToString() |</b> @course.StartDate.ToShortDateString() - @course.EndDate.ToShortDateString()</MudText>
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+                @if (FilteredCourses.Count == 0 && ModulePassed == false)
+                {
+                    <MudPaper Class="d-flex align-left mb-2" Elevation="0">
+                        <MudText Color="Color.Warning" Class="d-flex align-center justify-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Warning"></MudIcon> - Der er ikke ledige kurser for denne underviser til det valgte modul
+                        </MudText>
+                    </MudPaper>
+                }
+                @if (ModulePassed == true)
+                {
+                    <MudPaper Class="d-flex align-left mb-2" Elevation="0">
+                        <MudText Color="Color.Info" Class="d-flex align-center justify-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Info"></MudIcon> - Underviseren har alleredet bestået det valgte modul
+                        </MudText>
+                    </MudPaper>
+                }
+                @if (SelectedCourse is not null)
+                {
+                    <MudSelect T="Status" Label="Status" Placeholder="Sæt status" Variant="Variant.Outlined" @bind-Value="SelectedStatus">
+                        @foreach (var status in Enum.GetValues<Status>())
+                        {
+                            <MudSelectItem T="Status" Value="@status">@status.ToString().Replace('_', ' ')</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+            }
+
+            <MudCardActions Class="justify-space-evenly">
+                <MudButton OnClick="Cancel" Color="Color.Surface" Variant="Variant.Filled">Annuller</MudButton>
+                <MudButton Color="Color.Primary" Variant="Variant.Filled" ButtonType="ButtonType.Submit" OnClick="HandleSubmit" Disabled="SelectedCourse is null">Tilføj</MudButton>
+            </MudCardActions>
+        </DialogContent>
+    </MudDialog>
+
+}
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public Person? Person { get; set; }
+
+    // Dropdown data
+    private List<ModuleWithCourseViewModel> Modules { get; set; } = new();
+    private List<Course> FilteredCourses { get; set; } = new();
+
+    private ModuleWithCourseViewModel? SelectedModule { get; set; } = null;
+    private Course? SelectedCourse { get; set; } = null;
+    private Status SelectedStatus { get; set; } = Status.Ikke_begyndt;
+    private bool? ModulePassed { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Modules = await ModuleService.GetModulesWithCoursesAsync();
+    }
+
+    private void OnModuleChanged(ModuleWithCourseViewModel module)
+    {
+        // Reset variables
+        SelectedCourse = null;
+        FilteredCourses.Clear();
+
+        SelectedModule = module;
+
+        // Check if Person has passed the selected Module
+        ModulePassed = Person?.PersonCourses.Any(x => x.Status == Status.Bestået && x.Course?.ModuleId == module.ModuleId);
+
+        if (ModulePassed == false)
+        {
+            // Filter out courses where any PersonCourse has the same PersonId as Person.PersonId
+            FilteredCourses = module.Courses
+            .Where(course => course.PersonCourses.All(pc => pc.PersonId != Person?.PersonId))
+            .ToList();
+        }
+    }
+
+    private void OnCourseChanged(Course course)
+    {
+        SelectedCourse = course;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (SelectedCourse is null || Person is null)
+        {
+            return;
+        }
+
+        PersonCourse newPersonCourse = new()
+            {
+                CourseId = SelectedCourse.CourseId,
+                PersonId = Person.PersonId,
+                Status = SelectedStatus
+            };
+
+        var resultSuccess = await PersonCourseService.AddPersonCourseAsync(newPersonCourse);
+
+        if (resultSuccess)
+        {
+            Snackbar.Add("Underviser tilføjet til kurset.", Severity.Success);
+            newPersonCourse.Course = SelectedCourse;
+            newPersonCourse.Person = Person;
+
+            MudDialog.Close(DialogResult.Ok(newPersonCourse));
+        }
+        else
+        {
+            Snackbar.Add("Kunne ikke tilføje underviseren til kurset.", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}
+

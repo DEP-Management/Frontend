@@ -1,0 +1,475 @@
+﻿@inject ISnackbar Snackbar
+@inject IPersonService PersonService
+@inject IDepartmentService DepartmentService
+@inject IUserService UserService
+@inject IDialogService DialogService
+@inject ILocationService LocationService
+@inject IObjectComparisonService ObjectComparisonService
+@inject NavigationManager NavigationManager;
+
+<MudGrid Spacing="0">
+    @* Table *@
+    <MudItem xs="7" md="@GetTableWidth()">
+        <GenericDataTable Height="calc(100vh - 236px)"
+                          TItem="Person"
+                          Items="@Teachers"
+                          TableTitle="Klik på en underviser"
+                          RowsPerPage="20"
+                          Filter="FilterFunc"
+                          OnRowClick="RowClicked">
+            <HeaderTemplate>
+                <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Person, object>(x => x.Name)">Navn</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Person, object>(x => x.Initials)">Initialer</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Person, object>(x => x.Department?.Name!)">Afdeling</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Person, object>(x => x.Location?.Name!)">Lokation</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Person, object>(x => x.EndDate)">Slut dato</MudTableSortLabel></MudTh>
+                <MudTh Style="text-align:center; max-width: 75px" Class="px-0"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Person, object>(x => x.CompletedModules)">Færdige moduler</MudTableSortLabel></MudTh>
+                <MudTh Style="text-align:center; max-width: 95px"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Person, object>(x => x.SvuEligible)">SVU Berettiget</MudTableSortLabel></MudTh>
+                <MudTh Style="text-align:center; max-width: 87px; min-width: 87px;"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Person, object>(x => x.SvuApplied)">SVU Søgt</MudTableSortLabel></MudTh>
+            </HeaderTemplate>
+            <RowTemplate Context="person">
+                <MudTd Style="max-width: 220px" Class="cursor-pointer truncate-text" title="@person.Name">
+                    @person.Name
+                </MudTd>
+                <MudTd>@person.Initials</MudTd>
+                <MudTd Style="max-width: 200px" Class="truncate-text" title="@person.Department?.Name">@person.Department?.Name</MudTd>
+                <MudTd>@person.Location?.Name</MudTd>
+                <MudTd Style="@person.EndDateStyle">
+                    @person.EndDate.ToShortDateString()
+                </MudTd>
+                <MudTd Style="text-align:center; max-width: 30px">@person.CompletedModules</MudTd>
+                <MudTd>
+                    <MudCheckBox T="bool" Value="@person.SvuApplied" ReadOnly="true" @onclick="() => RowClicked(person)" />
+                </MudTd>
+                <MudTd>
+                    <MudCheckBox T="bool" Value="@person.SvuApplied" ReadOnly="true" @onclick="() => RowClicked(person)" />
+                </MudTd>
+            </RowTemplate>
+        </GenericDataTable>
+    </MudItem>
+
+    @* Edit form *@
+    @if (SelectedPerson is not null)
+    {
+        <MudItem xs="5" md="4" lg="4" Class="scrollable-tab-container">
+            <MudCard Class="pa-4 mb-4" Elevation="0">
+                <MudForm Model="EditablePerson" @ref="form" @bind-IsValid="@success">
+                    <MudGrid Spacing="2" Class="px-2 d-flex justify-start">
+
+                        <MudItem xs="12" Class="d-flex justify-end">
+                            <MudTooltip Text="Gå til underviseren's profil">
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Primary"
+                                           EndIcon="@Icons.Material.Filled.FollowTheSigns"
+                                           OnClick="NavigateToTeacherProfile">
+                                    Profil
+                                </MudButton>
+                            </MudTooltip>
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string"
+                                          Label="Navn"
+                                          Class="mb-3"
+                                          Required="true"
+                                          Immediate="true"
+                                          Margin="Margin.Dense"
+                                          Disabled="!IsEditing"
+                                          Variant="Variant.Outlined"
+                                          @bind-Value="EditablePerson!.Name" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string"
+                                          Class="mb-3"
+                                          Label="Initialer"
+                                          Margin="Margin.Dense"
+                                          Disabled="!IsEditing"
+                                          Variant="Variant.Outlined"
+                                          @bind-Value="EditablePerson!.Initials" />
+                        </MudItem>
+
+                        <MudItem xs="6">
+                            <MudSelect T="int?"
+                                       Clearable
+                                       Label="Afdeling"
+                                       Margin="Margin.Dense"
+                                       Disabled="!IsEditing"
+                                       Variant="Variant.Outlined"
+                                       @bind-Value="EditablePerson!.DepartmentId">
+                                @foreach (var dep in Departments)
+                                {
+                                    <MudSelectItem T="int?" Value="dep.DepartmentId">@dep.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <MudItem xs="6">
+                            <MudSelect T="int?"
+                                       Clearable
+                                       Label="Lokation"
+                                       Margin="Margin.Dense"
+                                       Disabled="!IsEditing"
+                                       Variant="Variant.Outlined"
+                                       @bind-Value="EditablePerson!.LocationId">
+                                @foreach (var location in Locations)
+                                {
+                                    <MudSelectItem T="int?" Value="location.LocationId">@location.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <MudItem xs="6">
+                            <MudSelect T="int?"
+                                       Clearable
+                                       Margin="Margin.Dense"
+                                       Disabled="!IsEditing"
+                                       Variant="Variant.Outlined"
+                                       Label="Driftskoordinator"
+                                       @bind-Value="EditablePerson!.OperationCoordinatorId">
+                                @foreach (var coordinator in Users.Where(u => u.UserRole == UserRole.Driftskoordinator))
+                                {
+                                    <MudSelectItem T="int?" Value="coordinator.UserId">@coordinator.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <MudItem xs="6">
+                            <MudSelect T="int?"
+                                       Clearable
+                                       Margin="Margin.Dense"
+                                       Disabled="!IsEditing"
+                                       Variant="Variant.Outlined"
+                                       Label="Pædagogisk Konsulent"
+                                       @bind-Value="EditablePerson!.EducationalConsultantId">
+                                @foreach (var consultant in Users.Where(u => u.UserRole == UserRole.Pædagogisk_konsulent))
+                                {
+                                    <MudSelectItem T="int?" Value="consultant.UserId">@consultant.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <MudItem xs="6">
+                            <MudSelect T="int?"
+                                       Clearable
+                                       Margin="Margin.Dense"
+                                       Disabled="!IsEditing"
+                                       Variant="Variant.Outlined"
+                                       Label="Uddannelsesleder"
+                                       @bind-Value="EditablePerson!.EducationalLeaderId">
+                                @foreach (var leader in Users.Where(u => u.UserRole == UserRole.Uddannelsesleder))
+                                {
+                                    <MudSelectItem T="int?" Value="leader.UserId">@leader.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <MudFlexBreak />
+                        <MudItem xs="6">
+                            <MudDatePicker Required
+                                           Class="mb-3"
+                                           Label="Start Dato"
+                                           Disabled="!IsEditing"
+                                           @bind-Date="tempHiringDate" />
+                        </MudItem>
+
+                        <MudItem xs="6">
+                            <MudDatePicker Required
+                                           Class="mb-3"
+                                           Label="Slut Dato"
+                                           Disabled="!IsEditing"
+                                           @bind-Date="tempEndDate" />
+                        </MudItem>
+
+                        <MudItem xs="12" Class="d-flex justify-space-evenly">
+                            <MudSwitch Class="mb-3"
+                                       Color="Color.Primary"
+                                       Disabled="!IsEditing"
+                                       Label="SVU Berettiget"
+                                       @bind-Value="EditablePerson!.SvuEligible" />
+
+                            <MudSwitch Class="mb-3"
+                                       Label="SVU Søgt"
+                                       Color="Color.Primary"
+                                       Disabled="!IsEditing"
+                                       @bind-Value="EditablePerson!.SvuApplied" />
+                        </MudItem>
+
+
+                        <!-- Submit Button Row -->
+                        <MudItem xs="12">
+                            <MudCardActions Class="d-flex justify-space-evenly">
+                                @if (!IsEditing)
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Error"
+                                               OnClick="DeletePerson">
+                                        Slet
+                                    </MudButton>
+
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Primary"
+                                               OnClick="EnterEditMode">
+                                        Rediger
+                                    </MudButton>
+                                }
+                                else
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Surface"
+                                               OnClick="CancelEdit">
+                                        Annuller
+                                    </MudButton>
+
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Primary"
+                                               OnClick="SaveChanges"
+                                               Disabled="!success">
+                                        Gem
+                                    </MudButton>
+                                }
+                            </MudCardActions>
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            </MudCard>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    private bool success;
+    private MudForm form = new();
+
+    private bool IsEditing { get; set; } = false;
+
+    private Person? SelectedPerson { get; set; }
+    private Person? EditablePerson { get; set; }
+
+    // Temp holders as DatePickers require a nullable DateTime
+    private DateTime? tempHiringDate;
+    private DateTime? tempEndDate;
+
+    // Table data
+    private List<Person> Teachers { get; set; } = new();
+
+    // Dropdown data
+    private List<User> Users { get; set; } = new();
+    private List<Department> Departments { get; set; } = new();
+    private List<Location> Locations { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Teachers = await PersonService.GetPersonsAsync();
+        Users = await UserService.GetUsersAsync();
+        Departments = await DepartmentService.GetDepartmentsAsync();
+        Locations = await LocationService.GetLocationsAsync();
+        PersonService.ComputeEndDateStyles(Teachers);
+    }
+
+    private async Task SaveChanges()
+    {
+        await form.Validate();
+        if (!form.IsValid || EditablePerson is null)
+        {
+            return;
+        }
+
+        if (tempHiringDate is null || tempEndDate is null)
+        {
+            Snackbar.Add("Start dato og slut dato er påkrævede.", Severity.Error);
+            return;
+        }
+
+        // Set the date values on the editable object.
+        EditablePerson.HiringDate = tempHiringDate.Value;
+        EditablePerson.EndDate = tempEndDate.Value;
+
+        // Update through API
+        var result = await PersonService.UpdatePersonAsync(EditablePerson);
+        if (result)
+        {
+            CopyPersonProperties(EditablePerson, SelectedPerson!);
+            int index = Teachers.FindIndex(d => d.PersonId == EditablePerson.PersonId);
+            if (index != -1)
+            {
+                SetTableDisplayObjects();
+                // Replace the teacher in the list
+                Teachers[index] = SelectedPerson!;
+            }
+            IsEditing = false;
+            Snackbar.Add("Underviseren er opdateret.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Underviseren kunnne ikke opdateres", Severity.Error);
+        }
+    }
+
+    private void SetTableDisplayObjects()
+    {
+        if (EditablePerson is null || SelectedPerson is null)
+        {
+            return;
+        }
+
+        // Needed to display the updated names in the table.
+        SelectedPerson.Department = Departments.FirstOrDefault(d => d.DepartmentId == EditablePerson.DepartmentId);
+        SelectedPerson.Location = Locations.FirstOrDefault(d => d.LocationId == EditablePerson.LocationId);
+    }
+
+    private async Task DeletePerson()
+    {
+        if (SelectedPerson is null || EditablePerson is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { x => x.Color, Color.Error },
+            { x => x.ContentText, $"Er du sikker på at du vil slette den valgte underviser?" },
+            { x => x.ButtonText, "Slet" },
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
+        var dialogResult = await dialog.Result;
+
+        if (dialogResult is null || dialogResult.Canceled)
+        {
+            return; // User chose to not delete
+        }
+
+        bool deleteResult = await PersonService.DeletePersonAsync(SelectedPerson.PersonId);
+        if (deleteResult)
+        {
+            Teachers.RemoveAll(d => d.PersonId == SelectedPerson.PersonId);
+            SelectedPerson = null;
+            EditablePerson = null;
+            StateHasChanged();
+            Snackbar.Add("Underviseren blev slettet.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Underviseren kunne ikke slettes", Severity.Error);
+        }
+    }
+
+    private void EnterEditMode()
+    {
+        IsEditing = true;
+    }
+
+    private void CancelEdit()
+    {
+        IsEditing = false;
+
+        // Restore original values by re-initializing EditableLocation
+        if (SelectedPerson is not null && EditablePerson is not null)
+        {
+            CopyPersonProperties(SelectedPerson, EditablePerson);
+        }
+
+        // Reset validation
+        form.ResetValidation();
+    }
+
+    private void NavigateToTeacherProfile()
+    {
+        if (SelectedPerson is null)
+        {
+            Console.WriteLine("Couldn't find selected person");
+            return;
+        }
+
+        NavigationManager.NavigateTo($"/undervisere/profil/{SelectedPerson.PersonId}");
+    }
+
+    // Methods for the table appearance and functionality
+    private int GetTableWidth()
+    {
+        return SelectedPerson is not null ? 8 : 12;
+    }
+
+    // Filter function to allow searching for Person properties in GenericDataTable component.
+    private bool FilterFunc(Person item, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        return item.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task RowClicked(Person person)
+    {
+        // Console.WriteLine("Checking comparisons now.");
+        // Console.WriteLine(EditablePerson?.ToString());
+        // Console.WriteLine(SelectedPerson?.ToString());
+        // var tempHiringDateDifferent = ObjectComparisonService.AreSimplePropertiesDifferent(tempHiringDate, SelectedPerson?.HiringDate);
+        // var tempEndDateDifferent = ObjectComparisonService.AreSimplePropertiesDifferent(tempEndDate, SelectedPerson?.EndDate);
+        // var editableAndSelectedDifferent = ObjectComparisonService.AreSimplePropertiesDifferent(EditablePerson, SelectedPerson);
+
+        // Check if user is in editmode and has changed any values
+        if (IsEditing && EditablePerson != null && (CompareTempDates() || ObjectComparisonService.AreSimplePropertiesDifferent(EditablePerson, SelectedPerson)))
+        {
+            var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { x => x.Color, Color.Error },
+            { x => x.ContentText, "Du har ændringer, som ikke er blevet gemt. Vil du opgive de nuværende ændringer og skifte til den valgte underviser?" },
+            { x => x.ButtonText, "Skift" },
+        };
+
+            var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
+            var result = await dialog.Result;
+
+            if (result is null || result.Canceled)
+            {
+                return; // User chose to stay, keep the same course.
+            }
+        }
+
+        if (EditablePerson is null)
+        {
+            EditablePerson = new Person();
+        }
+
+        // Set selected course and tempDate values
+        CopyPersonProperties(person, EditablePerson);
+        SelectedPerson = person;
+        IsEditing = false;  // Reset edit mode after switching
+    }
+
+    // Copy and compare methods
+    private void CopyPersonProperties(Person source, Person target)
+    {
+        target.PersonId = source.PersonId;
+        target.Name = source.Name;
+        target.Initials = source.Initials;
+        target.DepartmentId = source.DepartmentId;
+        target.LocationId = source.LocationId;
+        target.EducationalConsultantId = source.EducationalConsultantId;
+        target.EducationalLeaderId = source.EducationalLeaderId;
+        target.OperationCoordinatorId = source.OperationCoordinatorId;
+        target.HiringDate = source.HiringDate;
+        target.EndDate = source.EndDate;
+        target.SvuEligible = source.SvuEligible;
+        target.SvuApplied = source.SvuApplied;
+        target.EndDateStyle = source.EndDateStyle;
+        target.CompletedModules = source.CompletedModules;
+
+        tempHiringDate = source.HiringDate;
+        tempEndDate = source.EndDate;
+    }
+
+
+    private bool CompareTempDates()
+    {
+        if (ObjectComparisonService.AreSimplePropertiesDifferent(tempHiringDate, SelectedPerson?.HiringDate)
+        || ObjectComparisonService.AreSimplePropertiesDifferent(tempEndDate, SelectedPerson?.EndDate))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+}

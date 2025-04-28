@@ -1,0 +1,124 @@
+﻿@using Course = DEP_Blazor_WASM.Entities.Models.Course;
+
+@inject IModuleService ModuleService
+@inject ICourseService CourseService
+@inject ISnackbar Snackbar
+
+<MudCard Class="pa-4 mb-4" Elevation="0">
+    <MudForm Model="NewCourse" @ref="form" @bind-IsValid="@success">
+        <MudGrid Spacing="2" Class="px-2">
+
+            <!-- Course Information -->
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2">Kursus Oplysninger</MudText>
+            </MudItem>
+
+            <!-- First Row: Module and CourseType -->
+            <MudItem xs="12" md="6">
+                <MudSelect T="Module"
+                           Label="Modul"
+                           Variant="Variant.Outlined"
+                           @bind-Value="NewCourse.Module"
+                           Required
+                           RequiredError="Modul er påkrævet">
+                    @foreach (var module in Modules)
+                    {
+                        <MudSelectItem T="Module" Value="module">@module.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudSelect T="CourseType"
+                           Label="Kursustype"
+                           Placeholder="Vælg kursustype"
+                           Variant="Variant.Outlined"
+                           @bind-Value="NewCourse.CourseType">
+                    @foreach (var type in Enum.GetValues<CourseType>())
+                    {
+                        <MudSelectItem T="CourseType" Value="@type">@type.ToString().Replace('_', ' ')</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <!-- Second Row: Start Date and End Date -->
+            <MudItem xs="12" md="6">
+                <MudDatePicker Label="Start Dato"
+                               Variant="Variant.Outlined"
+                               @bind-Date="tempStartDate"
+                               Required
+                               RequiredError="Start Dato er påkrævet" />
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudDatePicker Label="Slut Dato"
+                               Variant="Variant.Outlined"
+                               @bind-Date="tempEndDate"
+                               Required
+                               RequiredError="Slut Dato er påkrævet" />
+            </MudItem>
+
+            <!-- Submit Button Row -->
+            <MudItem xs="12">
+                <MudCardActions Class="d-flex justify-center">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Disabled="@(!success)"
+                               OnClick="Submit">
+                        Opret
+                    </MudButton>
+                </MudCardActions>
+            </MudItem>
+
+        </MudGrid>
+    </MudForm>
+</MudCard>
+
+@code {
+    private bool success;
+    private MudForm form;
+    private Course NewCourse { get; set; } = new();
+    private List<Module> Modules { get; set; } = new();
+    private DateTime? tempStartDate;
+    private DateTime? tempEndDate;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Modules = await ModuleService.GetModulesAsync();
+    }
+
+    private async Task Submit()
+    {
+        if (NewCourse.Module is null)
+        {
+            Snackbar.Add("Der skal vælges et modul.", Severity.Warning);
+            return;
+        }
+
+        if (tempStartDate is null || tempEndDate is null)
+        {
+            Snackbar.Add("Der skal sættes start dato og slut dato.", Severity.Warning);
+            return;
+        }
+
+        //Help here
+        NewCourse.StartDate = tempStartDate.Value;
+        NewCourse.EndDate = tempEndDate.Value;
+
+        // Set FK from module selected in dropdown
+        NewCourse.ModuleId = NewCourse.Module.ModuleId;
+        
+        var courseCreated = await CourseService.AddCourseAsync(NewCourse);
+
+        if (courseCreated)
+        {
+            Snackbar.Add("Kursus oprettet", Severity.Success);
+            await form.ResetAsync();
+        }
+        else
+        {
+            Snackbar.Add("Kurset kunne ikke oprettes", Severity.Error);
+        }
+
+    }
+}

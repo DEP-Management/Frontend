@@ -1,0 +1,32 @@
+﻿@page "/login"
+@* Use specific layout that doesn't include NavMenu *@
+@layout LoginLayout
+
+<div class="login-container">
+    <MudContainer MaxWidth="MaxWidth.ExtraSmall">
+        <MudCard Class="py-8 ma-4" Outlined="true">
+            <!-- Logo -->
+            <MudCardHeader Class="mb-3">
+                <MudImage Src="images/login-logo-transparent.png" Alt="TEC Logo" ObjectFit="ObjectFit.Cover" Class="logo" />
+            </MudCardHeader>
+
+            <!-- Login Form -->
+            <EditForm Model="loginModel" OnValidSubmit="SubmitLogin" style="padding: 0px 10px;">
+                <DataAnnotationsValidator />
+                <MudTextField Label="Brugernavn" @bind-Value="loginModel.Username" Class="mb-3 mx-8" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                <MudTextField Label="Password" @bind-Value="loginModel.Password" InputType="InputType.Password" Class="mb-4 mx-8" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+
+
+                @if (invalidLogin)
+                {
+                    <MudText Color="Color.Error" Class="mb-2">Forkert brugernavn eller password</MudText>
+                }
+                <MudCardActions Class="justify-center">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Medium" ButtonType="ButtonType.Submit" Class="mx-6">
+                        Login
+                    </MudButton>
+                </MudCardActions>
+            </EditForm>
+        </MudCard>
+    </MudContainer>
+</div>

@@ -1,0 +1,249 @@
+﻿@using System.Reflection
+
+@inject IDepartmentService DepartmentService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudGrid Spacing="0">
+    @* Table *@
+    <MudItem xs="12" md="@GetTableWidth()">
+        <GenericDataTable Height="calc(100vh - 236px)"
+        TItem="Department"
+        Items="@Departments"
+        TableTitle="Klik på en afdeling"
+        Filter="FilterFunc"
+        RowsPerPage="20"
+        OnRowClick="RowClicked">
+            <HeaderTemplate>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Department, object>(x => x.Name)">
+                        Navn
+                    </MudTableSortLabel>
+                </MudTh>
+            </HeaderTemplate>
+            <RowTemplate Context="department">
+                <MudTd Class="cursor-pointer" title="@department.Name">@department.Name</MudTd>
+            </RowTemplate>
+        </GenericDataTable>
+    </MudItem>
+
+    @* Edit form *@
+    @if (SelectedDepartment is not null)
+    {
+        <MudItem xs="4" md="4" lg="4" Class="scrollable-tab-container">
+            <MudCard Class="pa-4 mb-4" Elevation="0">
+                <MudForm Model="EditableDepartment" @ref="form" @bind-IsValid="@success">
+                    <MudGrid Spacing="2" Class="px-2 d-flex justify-center">
+                        <!-- Department Name Input -->
+                        <MudItem xs="12" md="8">
+                            <MudTextField T="string"
+                            Label="Navn"
+                            @bind-Value="EditableDepartment!.Name"
+                            Variant="Variant.Outlined"
+                            Immediate="true"
+                            Required="true"
+                            RequiredError="Navn på afdeling er påkrævet."
+                            Disabled="!IsEditing" />
+                        </MudItem>
+
+                        <!-- Submit Button Row -->
+                        <MudItem xs="12">
+                            <MudCardActions Class="d-flex justify-space-evenly">
+                                @if (!IsEditing)
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Error"
+                                    OnClick="DeleteDepartment">
+                                        Slet
+                                    </MudButton>
+
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Primary"
+                                    OnClick="EnterEditMode">
+                                        Rediger
+                                    </MudButton>
+                                }
+                                else
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Surface"
+                                    OnClick="CancelEdit">
+                                        Annuller
+                                    </MudButton>
+
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Primary"
+                                    OnClick="SaveChanges"
+                                    Disabled="!success">
+                                        Gem
+                                    </MudButton>
+                                }
+                            </MudCardActions>
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            </MudCard>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    private bool success;
+    private MudForm form = new();
+
+    private bool IsEditing { get; set; } = false;
+
+    private List<Department> Departments { get; set; } = new();
+    private Department? SelectedDepartment { get; set; }
+    private Department? EditableDepartment { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Departments = await DepartmentService.GetDepartmentsAsync();
+    }
+
+    private async Task SaveChanges()
+    {
+        await form.Validate();
+        if (!form.IsValid || EditableDepartment is null)
+        {
+            return;
+        }
+
+        var result = await DepartmentService.UpdateDepartmentAsync(EditableDepartment);
+        if (result)
+        {
+            CopyDepartmentProperties(EditableDepartment, SelectedDepartment!);
+            int index = Departments.FindIndex(d => d.DepartmentId == EditableDepartment.DepartmentId);
+            if (index != -1)
+            {
+                // Replace the department in the list
+                Departments[index] = SelectedDepartment!;
+            }
+            IsEditing = false;
+            Snackbar.Add("Afdeling opdateret.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Afdelingen kunnne ikke opdateres", Severity.Error);
+        }
+    }
+
+    private async Task DeleteDepartment()
+    {
+        if (SelectedDepartment is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { x => x.Color, Color.Error },
+            { x => x.ContentText, $"Er du sikker på at du vil slette den valgte afdeling: {SelectedDepartment.Name}?" },
+            { x => x.ButtonText, "Slet" },
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
+        var dialogResult = await dialog.Result;
+
+        if (dialogResult is null || dialogResult.Canceled)
+        {
+            return; // User chose to not delete
+        }
+
+        bool deleteResult = await DepartmentService.DeleteDepartmentAsync(SelectedDepartment.DepartmentId);
+        if (deleteResult)
+        {
+            Departments.RemoveAll(d => d.DepartmentId == SelectedDepartment.DepartmentId);
+            SelectedDepartment = null;
+            EditableDepartment = null;
+            StateHasChanged();
+            Snackbar.Add("Afdeling slettet.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Afdelingen kunne ikke slettes", Severity.Error);
+        }
+    }
+
+
+    private void EnterEditMode()
+    {
+        IsEditing = true;
+    }
+
+    private void CancelEdit()
+    {
+        IsEditing = false;
+
+        // Restore original values by re-initializing EditableDepartment
+        if (SelectedDepartment is not null && EditableDepartment is not null)
+        {
+            CopyDepartmentProperties(SelectedDepartment, EditableDepartment);
+        }
+
+        // Reset validation
+        form.ResetValidation();
+    }
+
+    private bool CheckUnsavedEdits(Department department1, Department department2)
+    {
+        return typeof(Department).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Any(prop => !Equals(prop.GetValue(department1), prop.GetValue(department2)));
+    }
+
+
+    // Methods for the table appearance and functionality
+    private int GetTableWidth()
+    {
+        return SelectedDepartment is not null ? 8 : 12;
+    }
+
+    // Filter function to allow searching for properties in GenericDataTable component.
+    private bool FilterFunc(Department item, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        return item.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task RowClicked(Department department)
+    {
+        // Check if user is in editmode and has changed any values
+        if (IsEditing && EditableDepartment != null && SelectedDepartment != null && CheckUnsavedEdits(EditableDepartment, SelectedDepartment))
+        {
+            var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { x => x.Color, Color.Error },
+            { x => x.ContentText, "Du har ændringer, som ikke er blevet gemt. Vil du opgive de nuværende ændringer og skifte til den valgte afdeling?" },
+            { x => x.ButtonText, "Skift" },
+        };
+
+            var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
+            var result = await dialog.Result;
+
+            if (result is null || result.Canceled)
+            {
+                return; // User chose to stay, keep the same department.
+            }
+        }
+
+        if (EditableDepartment is null)
+        {
+            EditableDepartment = new Department();
+        }
+
+
+        // Set selected department
+        CopyDepartmentProperties(department, EditableDepartment);
+        SelectedDepartment = department;
+        IsEditing = false;  // Reset edit mode after switching
+    }
+
+    private void CopyDepartmentProperties(Department source, Department target)
+    {
+        target.DepartmentId = source.DepartmentId;
+        target.Name = source.Name;
+    }
+
+}

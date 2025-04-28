@@ -1,0 +1,240 @@
+﻿@inject IDepartmentService departmentService
+@inject ILocationService locationService
+@inject IUserService userService
+@inject IPersonService personService
+@inject ISnackbar Snackbar
+
+@if (EditablePerson is null)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+else
+{
+    <MudCard Class="px-10 pb-0" Elevation="0" Style="max-height: 100%; overflow-y: auto;">
+        <EditForm Model="EditablePerson" OnValidSubmit="SaveChanges">
+            <MudCardContent Class="pb-0">
+                <DataAnnotationsValidator />
+
+                <!-- General Info -->
+                <MudTextField T="string" Label="Navn" @bind-Value="EditablePerson.Name"
+                              Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Disabled="!IsEditing" Required="true" />
+
+                <MudTextField T="string" Label="Initialer" @bind-Value="EditablePerson.Initials"
+                              Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Disabled="!IsEditing" />
+
+                <!-- Dropdowns -->
+                <MudItem xs="12">
+                    <MudSelect T="int?" Label="Afdeling" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="!IsEditing"
+                               @bind-Value="EditablePerson.DepartmentId" Clearable>
+                        @foreach (var dep in Departments)
+                        {
+                            <MudSelectItem T="int?" Value="dep.DepartmentId">@dep.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudSelect T="Location" Label="Lokation" @bind-Value="EditablePerson.Location"
+                           Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Disabled="!IsEditing" Clearable=true Placeholder="- Ingen Lokation -">
+                    <MudSelectItem T="Location" Value="null">- Ingen -</MudSelectItem>
+                    @foreach (var location in Locations)
+                    {
+                        <MudSelectItem T="Location" Value="location">@location.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudSelect T="User" Label="Driftskoordinator"
+                           @bind-Value="EditablePerson.OperationCoordinator"
+                           Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Disabled="!IsEditing" Clearable="true" Placeholder="- Ingen Drifskoordinator -">
+                    <MudSelectItem T="User" Value="null">- Ingen -</MudSelectItem>
+                    @foreach (var coordinator in Users.Where(u => u.UserRole == UserRole.Driftskoordinator))
+                    {
+                        <MudSelectItem T="User" Value="coordinator">@coordinator.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudSelect T="User" Label="Pædagogisk Konsulent"
+                           @bind-Value="EditablePerson.EducationalConsultant"
+                           Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Disabled="!IsEditing" Clearable="true" Placeholder="- Ingen Pædagogisk Konsulent -">
+                    <MudSelectItem T="User" Value="null">- Ingen -</MudSelectItem>
+                    @foreach (var consultant in Users.Where(u => u.UserRole == UserRole.Pædagogisk_konsulent))
+                    {
+                        <MudSelectItem T="User" Value="consultant">@consultant.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudSelect T="User" Label="Uddannelsesleder"
+                           @bind-Value="EditablePerson.EducationalLeader"
+                           Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Disabled="!IsEditing" Clearable="true" Placeholder="- Ingen Uddannelsesleder -">
+                    <MudSelectItem T="User" Value="null">- Ingen -</MudSelectItem>
+                    @foreach (var leader in Users.Where(u => u.UserRole == UserRole.Uddannelsesleder))
+                    {
+                        <MudSelectItem T="User" Value="leader">@leader.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+
+                <!-- Date Pickers -->
+                <MudDatePicker Label="Start Dato" @bind-Date="EditablePersonHiringDate"
+                               Class="mb-3" Disabled="!IsEditing" Required />
+                <MudDatePicker Label="Slut Dato" @bind-Date="EditablePersonEndDate"
+                               Class="mb-3" Disabled="!IsEditing" Required />
+
+                <!-- Switches for boolean properties -->
+                <MudItem xs="12" Class="d-flex justify-space-around">
+                    <MudSwitch @bind-Value="EditablePerson.SvuEligible" Color="Color.Primary"
+                               Label="SVU Berettiget" Disabled="!IsEditing" Class="mb-3" />
+                    <MudSwitch @bind-Value="EditablePerson.SvuApplied" Color="Color.Primary"
+                               Label="SVU Søgt" Disabled="!IsEditing" Class="mb-3" />
+                </MudItem>
+
+            </MudCardContent>
+            <MudCardActions>
+                @if (!IsEditing)
+                {
+                    <MudContainer Class="d-flex justify-center" MaxWidth="MaxWidth.ExtraSmall">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="EnterEditMode">
+                            Rediger
+                        </MudButton>
+                    </MudContainer>
+                }
+                else
+                {
+                    <MudContainer Class="d-flex justify-space-around" MaxWidth="MaxWidth.ExtraSmall">
+                        <MudButton Variant="Variant.Filled" Color="Color.Surface" OnClick="CancelEdit">
+                            Annuller
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit">
+                            Gem
+                        </MudButton>
+                    </MudContainer>
+                }
+            </MudCardActions>
+        </EditForm>
+    </MudCard>
+}
+
+
+@code {
+
+    [Parameter] public Person OriginalPerson { get; set; }
+    [Parameter] public bool IsOutlined { get; set; } = true;
+
+    // These are needed because MudDatePickers need it to be a nullable DateTime.
+    private DateTime? EditablePersonHiringDate { get; set; }
+    private DateTime? EditablePersonEndDate { get; set; }
+
+    // Dropdown values
+    private List<Department> Departments = new List<Department>();
+    private List<Location> Locations = new List<Location>();
+    private List<User> Users = new List<User>();
+
+    // Used for the EditForm
+    private Person? EditablePerson { get; set; }
+
+    // Controls whether or not inputs are disabled
+    private bool IsEditing { get; set; } = false;
+
+    protected async override Task OnInitializedAsync()
+    {
+        // Load dropdown data
+        Departments = await departmentService.GetDepartmentsAsync();
+        Locations = await locationService.GetLocationsAsync();
+        Users = await userService.GetUsersAsync();
+        ResetEditablePerson();
+
+
+    }
+
+    private void EnterEditMode()
+    {
+        IsEditing = true;
+    }
+
+    private void CancelEdit()
+    {
+        // Revert changes by resetting EditablePerson to the original values
+        ResetEditablePerson();
+        IsEditing = false;
+    }
+
+    private async void SaveChanges()
+    {
+        // Commit changes from EditablePerson to OriginalPerson
+        OriginalPerson.Name = EditablePerson!.Name;
+        OriginalPerson.Initials = EditablePerson.Initials;
+        OriginalPerson.DepartmentId = EditablePerson.DepartmentId;
+        OriginalPerson.LocationId = EditablePerson.Location?.LocationId;
+        OriginalPerson.EducationalConsultantId = EditablePerson.EducationalConsultantId;
+        OriginalPerson.EducationalLeaderId = EditablePerson.EducationalLeaderId;
+        OriginalPerson.OperationCoordinatorId = EditablePerson.OperationCoordinatorId;
+        OriginalPerson.SvuEligible = EditablePerson.SvuEligible;
+        OriginalPerson.SvuApplied = EditablePerson.SvuApplied;
+        OriginalPerson.EducationalConsultant = EditablePerson.EducationalConsultant;
+        OriginalPerson.EducationalLeader = EditablePerson.EducationalLeader;
+        OriginalPerson.OperationCoordinator = EditablePerson.OperationCoordinator;
+        OriginalPerson.Department = EditablePerson.Department;
+        OriginalPerson.Location = EditablePerson.Location;
+
+        //Fallback to original value for dates if input is null.
+        OriginalPerson.HiringDate = EditablePersonHiringDate ?? OriginalPerson.HiringDate;
+        OriginalPerson.EndDate = EditablePersonEndDate ?? OriginalPerson.EndDate;
+
+        // Update Person in the database.
+        var updateSuccess = await personService.UpdatePersonAsync(OriginalPerson);
+
+        // Display Snackbar for user feedback
+        if (updateSuccess)
+        {
+            Snackbar.Add("Underviser opdateret", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Underviser kunne ikke opdateres", Severity.Error);
+        }
+
+        // Exit editing mode
+        IsEditing = false;
+
+        // Re-render so the form is out of editmode again
+        StateHasChanged();
+    }
+
+    private void ResetEditablePerson()
+    {
+        if (OriginalPerson == null)
+        {
+            return;
+        }
+
+        EditablePerson = new Person
+            {
+                PersonId = OriginalPerson.PersonId,
+                Name = OriginalPerson.Name,
+                Initials = OriginalPerson.Initials,
+                DepartmentId = OriginalPerson.DepartmentId,
+                LocationId = OriginalPerson.LocationId,
+                EducationalConsultantId = OriginalPerson.EducationalConsultantId,
+                EducationalLeaderId = OriginalPerson.EducationalLeaderId,
+                OperationCoordinatorId = OriginalPerson.OperationCoordinatorId,
+                HiringDate = OriginalPerson.HiringDate,
+                EndDate = OriginalPerson.EndDate,
+                SvuEligible = OriginalPerson.SvuEligible,
+                SvuApplied = OriginalPerson.SvuApplied,
+                EducationalConsultant = OriginalPerson.EducationalConsultant,
+                EducationalLeader = OriginalPerson.EducationalLeader,
+                OperationCoordinator = OriginalPerson.OperationCoordinator,
+                Department = OriginalPerson.Department,
+                Location = OriginalPerson.Location
+            };
+        EditablePersonHiringDate = OriginalPerson.HiringDate;
+        EditablePersonEndDate = OriginalPerson.EndDate;
+
+        StateHasChanged();
+    }
+}

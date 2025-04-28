@@ -1,0 +1,18 @@
+﻿@page "/kurser"
+@if (!SecondViewSelected){
+<CourseFromModule SecondViewSelectionChanged="ViewSelectionChanged"/>
+}
+else
+{
+    <CoursesFromLeader/>
+}
+
+@code {
+    private bool SecondViewSelected { get; set; } = false;
+
+    private void ViewSelectionChanged(bool selectionChanged)
+    {
+        SecondViewSelected = selectionChanged;
+        Console.WriteLine($"SecondViewSelected: {SecondViewSelected}");
+    }
+}

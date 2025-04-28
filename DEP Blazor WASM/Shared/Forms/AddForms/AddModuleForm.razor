@@ -1,0 +1,70 @@
+﻿@inject IModuleService ModuleService
+@inject ISnackbar Snackbar
+
+<MudCard Class="pa-4 mb-4" Elevation="0">
+    <MudForm Model="newModule" @ref="form" @bind-IsValid="@success">
+        <MudGrid Spacing="2" Class="px-2">
+
+            <!-- Module Information -->
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2">Modul Oplysninger</MudText>
+            </MudItem>
+
+            <!-- Module Name -->
+            <MudItem xs="12" md="6">
+                <MudTextField T="string"
+                              Label="Navn"
+                              @bind-Value="newModule.Name"
+                              Immediate="true"
+                              Required="true"
+                              Variant="Variant.Outlined"
+                              RequiredError="Navn på modulet er påkrævet." />
+            </MudItem>
+
+            <!-- Module Description -->
+            <MudItem xs="12" md="6">
+                <MudTextField T="string"
+                              Label="Beskrivelse"
+                              @bind-Value="newModule.Description"
+                              Variant="Variant.Outlined"
+                              Lines="1"
+                              AutoGrow="true" />
+            </MudItem>
+
+            <!-- Submit Button Row -->
+            <MudItem xs="12">
+                <MudCardActions Class="d-flex justify-center">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Disabled="@(!success)"
+                               OnClick="Submit">
+                        Opret
+                    </MudButton>
+                </MudCardActions>
+            </MudItem>
+
+        </MudGrid>
+    </MudForm>
+</MudCard>
+
+@code {
+    bool success;
+    MudForm form;
+    private Module newModule { get; set; } = new();
+
+    private async Task Submit()
+    {
+        var moduleCreated = await ModuleService.AddModuleAsync(newModule);
+
+        if (moduleCreated)
+        {
+            Snackbar.Add("Modul oprettet", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Modulet kunne ikke oprettes", Severity.Error);
+        }
+
+        await form.ResetAsync();
+    }
+}

@@ -1,0 +1,58 @@
+﻿@inject IDepartmentService DepartmentService
+@inject ISnackbar Snackbar
+
+<MudCard Class="pa-4 mb-4" Elevation="0">
+    <MudForm Model="newDepartment" @ref="form" @bind-IsValid="@success">
+        <MudGrid Spacing="2" Class="px-2">
+
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2">Afdelingsnavn</MudText>
+            </MudItem>
+            <!-- Department Name Input -->
+            <MudItem xs="12" md="6">
+                <MudTextField T="string"
+                              Label="Navn"
+                              @bind-Value="newDepartment.Name"
+                              Variant="Variant.Outlined"
+                              Immediate="true"
+                              Required="true"
+                              RequiredError="Navn på afdeling er påkrævet." />
+            </MudItem>
+
+            <!-- Submit Button Row -->
+            <MudItem xs="12">
+                <MudCardActions Class="d-flex justify-center">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Disabled="@(!success)"
+                               OnClick="Submit">
+                        Opret
+                    </MudButton>
+                </MudCardActions>
+            </MudItem>
+        </MudGrid>
+    </MudForm>
+</MudCard>
+
+@code {
+    bool success;
+    private MudForm form;
+    private Department newDepartment { get; set; } = new();
+
+    private async Task Submit()
+    {
+        Console.WriteLine("Department name: " + newDepartment.Name);
+        var departmentCreated = await DepartmentService.AddDepartmentAsync(newDepartment);
+
+        if (departmentCreated)
+        {
+            Snackbar.Add("Afdeling oprettet", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Afdeling kunne ikke oprettes", Severity.Error);
+        }
+
+        await form.ResetAsync();
+    }
+}

@@ -1,0 +1,449 @@
+﻿@page "/undervisere/profil/{personId:int}"
+@using DEP_Blazor_WASM.Shared.Dialogs
+
+@inject IPersonService personService
+@inject IPersonCourseService personCourseService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IFileService fileService
+
+@if (person == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <MudContainer Class="px-1" MaxWidth="MaxWidth.False" Style="height: calc(100vh - 64px)">
+        <MudGrid Style="height: 100%;" Spacing="2">
+
+            <!-- Left Column (Edit Person Form) -->
+            <MudItem xs="12" sm="6" md="4" Style="height: 100%;">
+                <MudPaper Style="display: flex; flex-direction: column; height: 100%;" Elevation="2">
+                    <EditPersonForm IsOutlined="false" OriginalPerson="person" />
+                </MudPaper>
+            </MudItem>
+
+            <!-- Right Column -->
+            <MudItem xs="12" sm="8" md="8" Style="height: 100%; display: flex; flex-direction: column; gap: 8px;">
+                <MudTabs Border="true" Centered="true" Elevation="2" Outlined="true">
+
+                    @* TODO: Turn this into a table like the file tab! *@
+                    <!-- Courses Tab -->
+                    <MudTabPanel Text="Kurser">
+                        @* <MudPaper Class="px-0" Outlined="false" Elevation="2"> *@
+                        @* <MudPaper Outlined="true" Style="flex: 1; overflow-y: auto; padding: 8px; position: relative;"> *@
+                        <MudPaper Outlined="true" Style="max-height: calc(100vh - 120px); overflow-y: auto;">
+                            <!-- Sticky Add PersonCourse Button Container -->
+                            <div style="position: sticky; top: 0px; background-color: none; z-index: 1;">
+                                @* <MudIconButton Icon="@Icons.Material.Outlined.Add"
+                                                   Color="Color.Primary"
+                                                   Variant="Variant.Filled"
+                                                   OnClick="@OpenAddPersonCourseDialog"
+                                                   Style="margin-bottom: 12px;"
+                                                   Size="Size.Medium"
+                                                   title="Tilføj underviser til kursus" /> *@
+
+                                <MudFab Class="my-2 ms-2"
+                                StartIcon="@Icons.Material.Filled.Add"
+                                Color="Color.Primary"
+                                OnClick="OpenAddPersonCourseDialog"
+                                Size="Size.Small"
+                                title="Tilføj til kursus"
+                                Label="Tilføj til kursus" />
+                            </div>
+
+                            <!-- Cards Container -->
+                            <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start;">
+                                @foreach (var pc in person.PersonCourses.OrderBy(x => x.Status))
+                                {
+                                    <MudCard Outlined="true" Style="flex: 0 1 calc(50% - 16px); max-width: calc(50% - 16px);">
+                                        <MudCardContent>
+                                            <!-- Delete Button -->
+                                            <MudIconButton Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" OnClick="@(() => DeletePersonCourseAsync(pc))" Style="float: right;" />
+
+                                            <!-- Course Name -->
+                                            <MudText Typo="Typo.h6">@pc.Course?.Module?.Name</MudText>
+
+                                            <!-- Course Type -->
+                                            <MudText Typo="Typo.body2">@pc.Course?.CourseType.ToString()</MudText>
+
+                                            <!-- Period -->
+                                            <MudText Typo="Typo.body2">
+                                                Periode: @pc.Course?.StartDate.ToString("dd/MM/yy") - @pc.Course?.EndDate.ToString("dd/MM/yy")
+                                            </MudText>
+
+                                            <!-- Status Dropdown -->
+                                            <MudSelect Dense="true" T="Status" Label="Status" Variant="Variant.Outlined" Placeholder="Please Select"
+                                            Value="pc.Status" ValueChanged="value => OnStatusChanged(pc, value)">
+                                                @foreach (Status status in Enum.GetValues(typeof(Status)))
+                                                {
+                                                    <MudSelectItem Value="status">@status.ToString().Replace("_", " ")</MudSelectItem>
+                                                }
+                                            </MudSelect>
+
+                                            <!-- Status Color Indicator -->
+                                            <div style="margin-top: 8px;">
+                                                <div class="moduleItemColorIndicator" style="background-color: @GetStatusColor(pc.Status); width: 20px; height: 20px;"></div>
+                                            </div>
+                                        </MudCardContent>
+                                    </MudCard>
+                                }
+                            </div>
+                        </MudPaper>
+                        @* </MudPaper> *@
+                    </MudTabPanel>
+
+                    <!-- Files Tab -->
+                    <MudTabPanel Text="Filer">
+                        <MudPaper Class="px-0">
+                            <!-- Add File Button -->
+                            @* <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                           Color="Color.Primary"
+                                           OnClick="@OpenFileUploadDialog"
+                                           Style="margin-bottom: 12px;"
+                                           Size="Size.Medium"
+                                           Variant="Variant.Filled"
+                                           title="Add File" /> *@
+                            <MudFab Class="my-2 ms-2"
+                            StartIcon="@Icons.Material.Filled.Add"
+                            Color="Color.Primary"
+                            OnClick="OpenFileUploadDialog"
+                            Size="Size.Small"
+                            title="Opload filer"
+                            Label="Opload filer" />
+
+                            <!-- Data Table -->
+                            <GenericDataTable Height="calc(100vh - 292px)"
+                            TItem="File"
+                            Items="@filteredProfileFiles"
+                            TableTitle="Filer"
+                            EnableSearch="false"
+                            Outlined="true">
+                                <HeaderTemplate>
+                                    <MudTh>
+                                        <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<File, object>(x => x.FileName)">
+                                            Filnavn
+                                        </MudTableSortLabel>
+                                    </MudTh>
+                                    <MudTh>
+                                        <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<File, object>(x => x.UploadDate)">
+                                            Oploadet
+                                        </MudTableSortLabel>
+                                    </MudTh>
+                                    <MudTh>
+                                        <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<File, object>(x => x.FileTag?.TagName!)">
+                                            Filkategori
+                                        </MudTableSortLabel>
+                                    </MudTh>
+                                    <MudTh Style="width: 0px">Download</MudTh>
+                                    <MudTh Style="width: 0px">Slet</MudTh>
+                                </HeaderTemplate>
+                                <RowTemplate Context="file">
+                                    <MudTd Style="max-width: 250px" Class="truncate-text" title="@file.FileName">@file.FileName</MudTd>
+                                    <MudTd>@file.UploadDate.ToShortDateString()</MudTd>
+                                    <MudTd>@file.FileTag?.TagName</MudTd>
+                                    <MudTd Style="text-align: center">
+                                        <MudIconButton Icon="@Icons.Material.Filled.FileDownload" Color="Color.Dark" Size="Size.Small" OnClick="@(() => DownloadFile(file.FileId))" />
+                                    </MudTd>
+                                    <MudTd Style="text-align: center">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Dark" Size="Size.Small" OnClick="@(() => DeleteFileAsync(file))" />
+                                    </MudTd>
+                                </RowTemplate>
+                            </GenericDataTable>
+                        </MudPaper>
+                    </MudTabPanel>
+                </MudTabs>
+                @*   <!-- PersonCourses Section -->
+                <MudPaper Outlined="true" Style="flex: 1; overflow-y: auto; padding: 8px; position: relative;">
+                    <!-- Sticky Add PersonCourse Button Container -->
+                    <div style="position: sticky; top: 0px; width: 40px; background-color: none; z-index: 1;">
+                        <MudIconButton Icon="@Icons.Material.Outlined.Add"
+                                       Color="Color.Primary"
+                                       Variant="Variant.Filled"
+                                       OnClick="@OpenAddPersonCourseDialog"
+                                       Style="margin-bottom: 12px;"
+                                       Size="Size.Medium"
+                                       title="Tilføj underviser til kursus" />
+                    </div>
+
+                    <!-- Cards Container -->
+                    <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start;">
+                        @foreach (var pc in person.PersonCourses.OrderBy(x => x.Status))
+                        {
+                            <MudCard Outlined="true" Style="flex: 0 1 calc(50% - 16px); max-width: calc(50% - 16px);">
+                                <MudCardContent>
+                                    <!-- Delete Button -->
+                                    <MudIconButton Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" OnClick="@(() => DeletePersonCourseAsync(pc))" Style="float: right;" />
+
+                                    <!-- Course Name -->
+                                    <MudText Typo="Typo.h6">@pc.Course?.Module?.Name</MudText>
+
+                                    <!-- Course Type -->
+                                    <MudText Typo="Typo.body2">@pc.Course?.CourseType.ToString()</MudText>
+
+                                    <!-- Period -->
+                                    <MudText Typo="Typo.body2">
+                                        Periode: @pc.Course?.StartDate.ToString("dd/MM/yy") - @pc.Course?.EndDate.ToString("dd/MM/yy")
+                                    </MudText>
+
+                                    <!-- Status Dropdown -->
+                                    <MudSelect Dense="true" T="Status" Label="Status" Variant="Variant.Outlined" Placeholder="Please Select"
+                                               Value="pc.Status" ValueChanged="value => OnStatusChanged(pc, value)">
+                                        @foreach (Status status in Enum.GetValues(typeof(Status)))
+                                        {
+                                            <MudSelectItem Value="status">@status.ToString().Replace("_", " ")</MudSelectItem>
+                                        }
+                                    </MudSelect>
+
+                                    <!-- Status Color Indicator -->
+                                    <div style="margin-top: 8px;">
+                                        <div class="moduleItemColorIndicator" style="background-color: @GetStatusColor(pc.Status); width: 20px; height: 20px;"></div>
+                                    </div>
+                                </MudCardContent>
+                            </MudCard>
+                        }
+                    </div>
+                </MudPaper>
+ *@
+            </MudItem>
+
+        </MudGrid>
+    </MudContainer>
+
+
+
+}
+
+@code {
+    [Parameter] public int personId { get; set; } // This property binds to the route parameter
+
+    private Person? person;
+
+    private UserRole CurrentUserRole { get; set; }
+
+    private IEnumerable<File> filteredProfileFiles => person.Files
+    .Where(f =>
+        f.FileTag == null ||
+        (f.FileTag.FileTagUserRoles?.Any(utr => utr.Role == CurrentUserRole) ?? false)
+    );
+
+    protected override async Task OnInitializedAsync()
+    {
+        person = await personService.GetPersonByIdAsync(personId);
+    }
+
+
+    /// <summary>
+    /// Deletes a PersonCourse after confirming the action with the user.
+    /// </summary>
+    /// <param name="pc">The PersonCourse object to be deleted.</param>
+    private async Task DeletePersonCourseAsync(PersonCourse pc)
+    {
+        if (!ValidatePersonCourse(pc))
+        {
+            return;
+        }
+
+        var userConfirmed = await ShowDeleteConfirmationDialogAsync(person?.Name!);
+        if (!userConfirmed)
+        {
+            return;
+        }
+
+        await PerformDeletePersonCourseAsync(pc);
+    }
+
+    /// <summary>
+    /// Validates the PersonCourse and person data.
+    /// </summary>
+    /// <param name="pc">The PersonCourse object to validate.</param>
+    /// <returns>True if valid, false otherwise.</returns>
+    private bool ValidatePersonCourse(PersonCourse pc)
+    {
+        if (pc == null || person == null)
+        {
+            Snackbar.Add("Person eller kursusdata mangler", Severity.Error);
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Displays a confirmation dialog for deletion.
+    /// </summary>
+    /// <param name="personName">The name of the person to display in the confirmation.</param>
+    /// <returns>True if the user confirms, false otherwise.</returns>
+    private async Task<bool> ShowDeleteConfirmationDialogAsync(string personName)
+    {
+        var parameters = new DialogParameters<ConfirmationDialog>
+    {
+        { x => x.ContentText, $"Er du sikker på du vil fjerne {personName} fra dette kursus?" },
+        { x => x.ButtonText, "Fjern" },
+        { x => x.Color, Color.Error }
+    };
+
+        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Fjern fra kursus?", parameters);
+        var result = await dialog.Result;
+
+        if (result is not null)
+        {
+            return !result.Canceled;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Performs the deletion of the PersonCourse and updates the UI accordingly.
+    /// </summary>
+    /// <param name="pc">The PersonCourse object to delete.</param>
+    private async Task PerformDeletePersonCourseAsync(PersonCourse pc)
+    {
+        try
+        {
+            Snackbar.Add("Fjerner underviser fra kursus...", Severity.Info);
+
+            var deleteSuccess = await personCourseService.DeletePersonCourseAsync(pc.PersonId, pc.CourseId);
+
+            if (deleteSuccess)
+            {
+                person?.PersonCourses.Remove(pc);
+                Snackbar.Add("Underviser fjernet fra kursus", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Underviser kunne ikke fjernes fra kursus", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Der opstod en fejl: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+
+
+    private async Task OnStatusChanged(PersonCourse pc, Status newStatus)
+    {
+        // Update the status locally
+        pc.Status = newStatus;
+
+        // Call the service to update the person course in the database
+        bool updateSuccess = await personCourseService.UpdatePersonCourseAsync(pc);
+
+        // Show a message to the user based on whether the update was successful
+        if (updateSuccess)
+        {
+            // Display success message
+            Console.WriteLine("PersonCourse status updated successfully.");
+            Snackbar.Add("Underviser opdateret", Severity.Success);
+        }
+        else
+        {
+            // Display error message
+            Console.WriteLine("Failed to update PersonCourse status.");
+            Snackbar.Add("Underviser kunne ikke opdateres", Severity.Error);
+        }
+    }
+
+    private async Task OpenFileUploadDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, NoHeader = true };
+        var parameters = new DialogParameters
+    {
+        { "PersonId", person?.PersonId },
+        { "PersonFiles", person?.Files }
+    };
+
+        var dialog = await DialogService.ShowAsync<UploadFilesDialog>("Fil Opload", parameters, options);
+
+        // Wait for the dialog to close
+        await dialog.Result;
+
+        // Trigger StateHasChanged after dialog closes
+        StateHasChanged();
+    }
+
+    private async Task DownloadFile(int fileId)
+    {
+        Console.WriteLine("ATTEMPTING TO DOWNLOAD");
+        try
+        {
+            await fileService.DownloadFileAsync(fileId);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error downloading file: {ex.Message}");
+        }
+    }
+
+    private async Task DeleteFileAsync(File file)
+    {
+        var parameters = new DialogParameters<ConfirmationDialog>
+    {
+        { x => x.ContentText, $"Er du sikker på du vil slette filen {file.FileName}" },
+        { x => x.ButtonText, "Slet" },
+        { x => x.Color, Color.Error }
+    };
+
+        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Slet fil?", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
+        {
+            return;
+        }
+
+        var deleteSuccess = await fileService.DeleteFileAsync(file);
+
+        if (!deleteSuccess)
+        {
+            Snackbar.Add("Fil kunne ikke slettes", Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add("Fil slettet", Severity.Success);
+            person?.Files.Remove(file);
+        }
+    }
+
+    private string GetStatusColor(Status status)
+    {
+        return status switch
+        {
+            Status.Ikke_begyndt => "#ddd", // Gray
+                                           // Status.Begyndt => "#ff9900",
+            Status.Ej_bestået => "red",   // Red
+            Status.Bestået => "green",   // Green
+            Status.Ikke_gennemført => "#ff9900", // Orange
+            _ => "#000" // Default (Black)
+        };
+    }
+
+    private async Task OpenAddPersonCourseDialog()
+    {
+        var parameters = new DialogParameters<AddPersonCourseDialog>
+        {
+            { x => x.Person, person}
+        };
+
+        var dialog = await DialogService.ShowAsync<AddPersonCourseDialog>("Tilføj Underviser Til Kursus", parameters);
+        var result = await dialog.Result;
+
+        if (result is null)
+        {
+            return;
+        }
+
+        if (!result.Canceled)
+        {
+            //
+            person?.PersonCourses.Add((PersonCourse)result.Data!);
+            Console.WriteLine("WOT");
+        }
+    }
+}

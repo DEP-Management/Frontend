@@ -1,0 +1,427 @@
+﻿@using System.Reflection
+
+@inject IUserService UserService
+@inject IDialogService DialogService
+@inject IDepartmentService DepartmentService
+@inject ILocationService LocationService
+@inject IObjectComparisonService ObjectComparisonService
+@inject ISnackbar Snackbar
+
+<MudGrid Spacing="0">
+    @* Table *@
+    <MudItem xs="12" md="@GetTableWidth()">
+        <GenericDataTable Height="calc(100vh - 236px)"
+        TItem="User"
+        Items="@Users"
+        TableTitle="Klik på en bruger"
+        Filter="FilterFunc"
+        RowsPerPage="20"
+        OnRowClick="RowClicked">
+            <HeaderTemplate>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<User, object>(x => x.Name)">
+                        Navn
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<User, object>(x => x.UserRole)">
+                        Brugerrolle
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<User, object>(x => x.UserName)">
+                        Brugernavn
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<User, object>(x => x.Department?.Name!)">
+                        Afdeling
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<User, object>(x => x.Location?.Name!)">
+                        Lokation
+                    </MudTableSortLabel>
+                </MudTh>
+            </HeaderTemplate>
+            <RowTemplate Context="user">
+                <MudTd Class="cursor-pointer" title="@user.Name">@user.Name</MudTd>
+                <MudTd Class="cursor-pointer" title="@user.Name">@user.UserRole.ToString().Replace('_', ' ')</MudTd>
+                <MudTd Class="cursor-pointer" title="@user.Name">@user.UserName</MudTd>
+                <MudTd Class="cursor-pointer" title="@user.Name">@user.Department?.Name</MudTd>
+                <MudTd Class="cursor-pointer" title="@user.Name">@user.Location?.Name</MudTd>
+            </RowTemplate>
+        </GenericDataTable>
+    </MudItem>
+
+    @* Edit form *@
+    @if (SelectedUser is not null)
+    {
+        <MudItem xs="4" md="3" lg="3" Class="scrollable-tab-container">
+            <MudCard Class="pa-4 mb-4" Elevation="0">
+                <MudForm Model="EditableUser" @ref="form" @bind-IsValid="@success">
+                    <MudGrid Spacing="2" Class="px-2 d-flex justify-center">
+                        <!-- Location Name Input -->
+                        <MudItem xs="12">
+                            <MudTextField T="string"
+                            Label="Navn"
+                            @bind-Value="EditableUser!.Name"
+                            Variant="Variant.Outlined"
+                            Immediate="true"
+                            Required="true"
+                            RequiredError="Navn på brugeren er påkrævet."
+                            Disabled="!IsEditing" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudTextField T="string"
+                            Label="Brugernavn"
+                            @bind-Value="EditableUser!.UserName"
+                            Variant="Variant.Outlined"
+                            Disabled="true" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudSelect T="UserRole"
+                            Label="Brugerrolle"
+                            Disabled="!IsEditing"
+                            Variant="Variant.Outlined"
+                            Placeholder="Vælg brugerrolle"
+                            Value="EditableUser!.UserRole"
+                            ValueChanged="OnUserRoleChanged">
+                                @foreach (UserRole role in Enum.GetValues(typeof(UserRole)))
+                                {
+                                    <MudSelectItem Value="role">@role.ToString().Replace("_", " ")</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <!-- Department Dropdown -->
+                        <MudItem xs="12" md="10" lg="12">
+                            <MudSelect T="int?"
+                            Label="Afdeling"
+                            Variant="Variant.Outlined"
+                            Disabled="!IsEditing"
+                            @bind-Value="EditableUser!.DepartmentId"
+                            Clearable>
+                                @foreach (var dep in Departments)
+                                {
+                                    <MudSelectItem T="int?" Value="dep.DepartmentId">@dep.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <!-- Location Dropdown -->
+                        <MudItem xs="12">
+                            <MudSelect T="int?"
+                            Label="Lokation"
+                            Variant="Variant.Outlined"
+                            Disabled="!IsEditing"
+                            @bind-Value="EditableUser!.LocationId"
+                            Clearable>
+                                @foreach (var location in Locations)
+                                {
+                                    <MudSelectItem T="int?" Value="location.LocationId">@location.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        @if (EditableUser?.UserRole == UserRole.Uddannelsesleder)
+                        {
+                            <!-- EducationBoss Dropdown -->
+                            <MudItem xs="12">
+                                <MudSelect T="int?"
+                                Label="Uddannelseschef"
+                                Variant="Variant.Outlined"
+                                Disabled="!IsEditing"
+                                @bind-Value="EditableUser!.EducationBossId"
+                                Clearable>
+                                    @foreach (var user in Users.Where(x => x.UserRole == UserRole.Uddannelseschef))
+                                    {
+                                        <MudSelectItem T="int?" Value="user.UserId">@user.Name</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudItem>
+                        }
+
+                        <!-- Submit Button Row -->
+                        <MudItem xs="12">
+                            <MudCardActions Class="d-flex justify-space-evenly">
+                                @if (!IsEditing)
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Error"
+                                    OnClick="DeleteLocation">
+                                        Slet
+                                    </MudButton>
+
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Primary"
+                                    OnClick="EnterEditMode">
+                                        Rediger
+                                    </MudButton>
+                                }
+                                else
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Surface"
+                                    OnClick="CancelEdit">
+                                        Annuller
+                                    </MudButton>
+
+                                    <MudButton Variant="Variant.Filled"
+                                    Color="Color.Primary"
+                                    OnClick="SaveChanges"
+                                    Disabled="!success">
+                                        Gem
+                                    </MudButton>
+                                }
+                            </MudCardActions>
+                        </MudItem>
+                        <MudDivider />
+                        @if (!IsEditing)
+                        {
+
+                            <MudItem xs="10" md="10" Class="mt-4 d-flex justify-center">
+                                <MudButton Variant="Variant.Filled"
+                                Color="Color.Dark"
+                                OnClick="ResetPassword"
+                                Disabled="false">
+                                    Nulstil Adgangskode
+                                </MudButton>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudForm>
+            </MudCard>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    private bool success;
+    private MudForm form = new();
+
+    private bool IsEditing { get; set; } = false;
+
+    private User? SelectedUser { get; set; }
+    private User? EditableUser { get; set; }
+
+    // Dropdown data
+    private List<Department> Departments { get; set; } = new();
+    private List<Location> Locations { get; set; } = new();
+    private List<User> Users { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Users = await UserService.GetUsersAsync();
+        Departments = await DepartmentService.GetDepartmentsAsync();
+        Locations = await LocationService.GetLocationsAsync();
+    }
+
+    private async Task ResetPassword()
+    {
+        if (SelectedUser is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { x => x.Color, Color.Error },
+            { x => x.ContentText, $"Er du sikker på at du vil nulstille adgangskoden for: {EditableUser?.Name}?" },
+            { x => x.ButtonText, "Nulstil" },
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
+        var dialogResult = await dialog.Result;
+
+        if (dialogResult is null || dialogResult.Canceled)
+        {
+            return; // User did not confirm
+        }
+
+        var resetResult = await UserService.ResetPasswordAsync(SelectedUser.UserId);
+
+        if (resetResult)
+        {
+            Snackbar.Add("Brugerens adgangskode er nulstillet.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Adgangskoden kunne ikke nulstilles", Severity.Error);
+        }
+    }
+
+    private async Task SaveChanges()
+    {
+        await form.Validate();
+        if (!form.IsValid || EditableUser is null)
+        {
+            return;
+        }
+
+        var result = await UserService.UpdateUserAsync(EditableUser);
+        if (result)
+        {
+            CopyUserProperties(EditableUser, SelectedUser!);
+            int index = Users.FindIndex(d => d.UserId == EditableUser.UserId);
+            if (index != -1)
+            {
+                SetTableDisplayObjects();
+                // Replace the location in the list
+                Users[index] = SelectedUser!;
+            }
+                IsEditing = false;
+            Snackbar.Add("Bruger opdateret.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Brugeren kunnne ikke opdateres", Severity.Error);
+        }
+    }
+
+    private void SetTableDisplayObjects()
+    {
+        if (EditableUser is null || SelectedUser is null)
+        {
+            return;
+        }
+
+        // Needed to display the updated names in the table.
+        SelectedUser.Department = Departments.FirstOrDefault(d => d.DepartmentId == EditableUser.DepartmentId);
+        SelectedUser.Location = Locations.FirstOrDefault(l => l.LocationId == EditableUser.LocationId);
+    }
+
+    private async Task DeleteLocation()
+    {
+        if (SelectedUser is null || EditableUser is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { x => x.Color, Color.Error },
+            { x => x.ContentText, $"Er du sikker på at du vil slette den valgte bruger: {EditableUser.Name}?" },
+            { x => x.ButtonText, "Slet" },
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
+        var dialogResult = await dialog.Result;
+
+        if (dialogResult is null || dialogResult.Canceled)
+        {
+            return; // User chose to not delete
+        }
+
+        bool deleteResult = await UserService.DeleteUserAsync(SelectedUser.UserId);
+        if (deleteResult)
+        {
+            Users.RemoveAll(d => d.UserId == SelectedUser.UserId);
+            SelectedUser = null;
+            EditableUser = null;
+            StateHasChanged();
+            Snackbar.Add("Bruger slettet.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Brugeren kunne ikke slettes", Severity.Error);
+        }
+    }
+
+    private void EnterEditMode()
+    {
+        IsEditing = true;
+    }
+
+    private void CancelEdit()
+    {
+        IsEditing = false;
+
+        // Restore original values by re-initializing EditableLocation
+        if (SelectedUser is not null && EditableUser is not null)
+        {
+            CopyUserProperties(SelectedUser, EditableUser);
+        }
+
+        // Reset validation
+        form.ResetValidation();
+    }
+
+    private void OnUserRoleChanged(UserRole role)
+    {
+        if (EditableUser is null)
+        {
+            return;
+        }
+
+        if (role != UserRole.Uddannelsesleder)
+        {
+            // Clear the EducationBossId if Uddannelsesleder is not selected.
+            EditableUser.EducationBossId = null;
+        }
+
+        EditableUser.UserRole = role;
+    }
+
+    // Methods for the table appearance and functionality
+    private int GetTableWidth()
+    {
+        return SelectedUser is not null ? 9 : 12;
+    }
+
+    // Filter function to allow searching for properties in GenericDataTable component.
+    private bool FilterFunc(User item, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        return item.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task RowClicked(User user)
+    {
+        // Check if user is in editmode and has changed any values
+        if (IsEditing && EditableUser != null && ObjectComparisonService.AreSimplePropertiesDifferent(EditableUser, SelectedUser))
+        {
+            var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { x => x.Color, Color.Error },
+            { x => x.ContentText, "Du har ændringer, som ikke er blevet gemt. Vil du opgive de nuværende ændringer og skifte til den valgte bruger?" },
+            { x => x.ButtonText, "Skift" },
+        };
+
+            var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
+            var result = await dialog.Result;
+
+            if (result is null || result.Canceled)
+            {
+                return; // User chose to stay, keep the same location.
+            }
+        }
+
+        if (EditableUser is null)
+        {
+            EditableUser = new User();
+        }
+
+        // Set selected location
+        CopyUserProperties(user, EditableUser);
+        SelectedUser = user;
+        IsEditing = false;  // Reset edit mode after switching
+    }
+
+    private void CopyUserProperties(User source, User target)
+    {
+        target.UserId = source.UserId;
+        target.Name = source.Name;
+        target.UserName = source.UserName;
+        target.DepartmentId = source.DepartmentId;
+        target.LocationId = source.LocationId;
+        target.EducationBossId = source.EducationBossId;
+        target.PasswordExpiryDate = source.PasswordExpiryDate;
+        target.UserRole = source.UserRole;
+    }
+
+
+}

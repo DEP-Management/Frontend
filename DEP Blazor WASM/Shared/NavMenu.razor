@@ -1,0 +1,44 @@
+﻿@inject IAuthService authService
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+
+<MudNavMenu>
+    <MudNavLink Href="/" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+    <MudNavLink Href="/undervisere" Match="NavLinkMatch.Prefix">Undervisere</MudNavLink>
+    <MudNavLink Href="/filer" Match="NavLinkMatch.Prefix">Filer</MudNavLink>
+    <MudNavLink Href="/kurser" Match="NavLinkMatch.Prefix">Kurser</MudNavLink>
+    <MudNavGroup Title="Administration" Expanded="false">
+        <MudNavLink Href="/admin-opret" Match="NavLinkMatch.Prefix">Opret</MudNavLink>
+        <MudNavLink Href="/admin-rediger" Match="NavLinkMatch.Prefix">Rediger</MudNavLink>
+    </MudNavGroup>
+    <MudNavGroup Title="Indstillinger" Expanded="false">
+        <MudNavLink OnClick="OpenChangePasswordDialog" Match="NavLinkMatch.Prefix">Skift Adgangskode</MudNavLink>
+        <MudNavLink OnClick="LogOutAsync" Match="NavLinkMatch.Prefix">Log ud</MudNavLink>
+    </MudNavGroup>
+</MudNavMenu>
+
+@code {
+    private async Task LogOutAsync()
+    {
+        var parameters = new DialogParameters<ConfirmationDialog>
+    {
+        { x => x.ContentText, "Er du sikker på at du vil logge ud?" },
+        { x => x.ButtonText, "Log ud" },
+        { x => x.Color, Color.Primary }
+    };
+
+        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Log ud?", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await authService.LogoutAsync();
+            NavigationManager.NavigateTo("/login");
+        }
+    }
+
+    private async Task OpenChangePasswordDialog()
+    {
+        await DialogService.ShowAsync<ChangePasswordDialog>("Skift Adgangskode");
+    }
+}

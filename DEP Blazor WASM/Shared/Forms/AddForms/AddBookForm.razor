@@ -1,0 +1,101 @@
+﻿@inject IModuleService ModuleService
+@inject IBookService BookService
+@inject ISnackbar Snackbar
+
+<MudCard Class="pa-4 mb-4" Elevation="0">
+    <MudForm Model="NewBook" @ref="form" @bind-IsValid="@success">
+        <MudGrid Spacing="2" Class="px-2">
+
+            <!-- Book Information -->
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2">Filkategori Oplysninger</MudText>
+            </MudItem>
+
+            <!-- First Row: Name and Module -->
+            <MudItem xs="12" md="6">
+                <MudTextField T="string"
+                              Label="Navn"
+                              @bind-Value="NewBook.Name"
+                              Variant="Variant.Outlined"
+                              Immediate="true"
+                              Required="true"
+                              RequiredError="Navn på Filkategorien er påkrævet." />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Module"
+                           Label="Modul"
+                           Variant="Variant.Outlined"
+                           @bind-Value="NewBook.Module"
+                           Required
+                           RequiredError="Modul er påkrævet">
+                    @foreach (var module in Modules)
+                    {
+                        <MudSelectItem T="Module" Value="module">@module.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <!-- Second Row: Amount -->
+            <MudItem xs="12" md="6">
+                <MudNumericField Label="Antal"
+                                 Variant="Variant.Outlined"
+                                 @bind-Value="NewBook.Amount"
+                                 Min="0"
+                                 Immediate="true"
+                                 Required="true"
+                                 RequiredError="Antal er påkrævet" />
+            </MudItem>
+
+            <!-- Submit Button Row -->
+            <MudItem xs="12">
+                <MudCardActions Class="d-flex justify-center">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Disabled="@(!success)"
+                               OnClick="Submit">
+                        Opret
+                    </MudButton>
+                </MudCardActions>
+            </MudItem>
+
+        </MudGrid>
+    </MudForm>
+</MudCard>
+
+@code {
+    bool success;
+    MudForm form;
+    private Book NewBook { get; set; } = new();
+    private List<Module> Modules { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("BOOKFORM ONINIT");
+        Modules = await ModuleService.GetModulesAsync();
+    }
+
+    private async Task Submit()
+    {
+        if (NewBook.Module is null)
+        {
+            Snackbar.Add("Der skal vælges et modul.", Severity.Warning);
+            return;
+        }
+
+        // Set FK from module selected in dropdown
+        NewBook.ModuleId = NewBook.Module.ModuleId;
+
+        var bookCreated = await BookService.AddBookAsync(NewBook);
+
+        if (bookCreated)
+        {
+            Snackbar.Add("Filkategori oprettet", Severity.Success);
+            await form.ResetAsync();
+        }
+        else
+        {
+            Snackbar.Add("Filkategorien kunne ikke oprettes", Severity.Error);
+        }
+
+    }
+}
