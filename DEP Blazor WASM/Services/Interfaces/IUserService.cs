@@ -19,5 +19,6 @@ namespace DEP_Blazor_WASM.Services.Interfaces
         Task<bool> DeleteUserAsync(int userId);
         Task<List<User>> GetUsersByEducationBossId(int id);
         Task<List<EducationalLeaderViewModel>> GetEducationalLeaderAsync(int id);
+        Task<List<EducationalBossViewModel>> GetEducationalBossesAsync();
     }
 }

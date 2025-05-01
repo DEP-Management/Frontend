@@ -181,7 +181,6 @@ namespace DEP_Blazor_WASM.Services
 
             return users;
         }
-
         public async Task<List<User>> GetUsersByEducationBossId(int id)
         {
             var response = await _httpClient.GetAsync("users/educationboss/" + id);
@@ -190,6 +189,19 @@ namespace DEP_Blazor_WASM.Services
             if (response.IsSuccessStatusCode)
             {
                 users = await response.Content.ReadFromJsonAsync<List<User>>() ?? new List<User>();
+            }
+
+            return users;
+        }
+
+        public async Task<List<EducationalBossViewModel>> GetEducationalBossesAsync()
+        {
+            var response = await _httpClient.GetAsync("users/educationBossesExcel");
+
+            var users = new List<EducationalBossViewModel>();
+            if (response.IsSuccessStatusCode)
+            {
+                users = await response.Content.ReadFromJsonAsync<List<EducationalBossViewModel>>() ?? new List<EducationalBossViewModel>();
             }
 
             return users;
