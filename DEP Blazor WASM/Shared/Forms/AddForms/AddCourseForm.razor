@@ -13,7 +13,18 @@
                 <MudText Typo="Typo.subtitle2">Kursus Oplysninger</MudText>
             </MudItem>
 
-            <!-- First Row: Module and CourseType -->
+            <!-- First Row: CourseNumber and Module -->
+            <MudItem xs="12" md="6">
+                <MudTextField T="int"
+                              InputMode="InputMode.numeric"
+                              Label="Kursus nummer"
+                              @bind-Value="NewCourse.CourseNumber"
+                              Variant="Variant.Outlined"
+                              Immediate="true"
+                              Required="true"
+                              RequiredError="Kursus nummer er påkrævet." />
+            </MudItem>
+
             <MudItem xs="12" md="6">
                 <MudSelect T="Module"
                            Label="Modul"
@@ -28,18 +39,7 @@
                 </MudSelect>
             </MudItem>
 
-            <MudItem xs="12" md="6">
-                <MudSelect T="CourseType"
-                           Label="Kursustype"
-                           Placeholder="Vælg kursustype"
-                           Variant="Variant.Outlined"
-                           @bind-Value="NewCourse.CourseType">
-                    @foreach (var type in Enum.GetValues<CourseType>())
-                    {
-                        <MudSelectItem T="CourseType" Value="@type">@type.ToString().Replace('_', ' ')</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
+
 
             <!-- Second Row: Start Date and End Date -->
             <MudItem xs="12" md="6">
@@ -56,6 +56,20 @@
                                @bind-Date="tempEndDate"
                                Required
                                RequiredError="Slut Dato er påkrævet" />
+            </MudItem>
+
+            <!-- Course Type -->
+            <MudItem xs="12" md="6">
+                <MudSelect T="CourseType"
+                           Label="Kursustype"
+                           Placeholder="Vælg kursustype"
+                           Variant="Variant.Outlined"
+                           @bind-Value="NewCourse.CourseType">
+                    @foreach (var type in Enum.GetValues<CourseType>())
+                    {
+                        <MudSelectItem T="CourseType" Value="@type">@type.ToString().Replace('_', ' ')</MudSelectItem>
+                    }
+                </MudSelect>
             </MudItem>
 
             <!-- Submit Button Row -->
@@ -101,13 +115,12 @@
             return;
         }
 
-        //Help here
         NewCourse.StartDate = tempStartDate.Value;
         NewCourse.EndDate = tempEndDate.Value;
 
         // Set FK from module selected in dropdown
         NewCourse.ModuleId = NewCourse.Module.ModuleId;
-        
+
         var courseCreated = await CourseService.AddCourseAsync(NewCourse);
 
         if (courseCreated)

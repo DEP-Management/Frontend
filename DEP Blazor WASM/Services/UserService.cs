@@ -181,6 +181,43 @@ namespace DEP_Blazor_WASM.Services
 
             return users;
         }
+        public async Task<List<User>> GetUsersByEducationBossId(int id)
+        {
+            var response = await _httpClient.GetAsync("users/educationboss/" + id);
 
+            var users = new List<User>();
+            if (response.IsSuccessStatusCode)
+            {
+                users = await response.Content.ReadFromJsonAsync<List<User>>() ?? new List<User>();
+            }
+
+            return users;
+        }
+
+        public async Task<List<EducationalBossViewModel>> GetEducationalBossesAsync()
+        {
+            var response = await _httpClient.GetAsync("users/educationBossesExcel");
+
+            var users = new List<EducationalBossViewModel>();
+            if (response.IsSuccessStatusCode)
+            {
+                users = await response.Content.ReadFromJsonAsync<List<EducationalBossViewModel>>() ?? new List<EducationalBossViewModel>();
+            }
+
+            return users;
+        }
+
+        public async Task<List<EducationalLeaderViewModel>> GetEducationalLeaderAsync(int id)
+        {
+            var response = await _httpClient.GetAsync($"users/educationLeaderExcel/{id}");
+
+            var users = new List<EducationalLeaderViewModel>();
+            if (response.IsSuccessStatusCode)
+            {
+                users = await response.Content.ReadFromJsonAsync<List<EducationalLeaderViewModel>>() ?? new List<EducationalLeaderViewModel>();
+            }
+
+            return users;
+        }
     }
 }
