@@ -1,15 +1,30 @@
-﻿namespace DEP_Blazor_WASM.Services.States
+﻿using DEP_Blazor_WASM.Pages;
+
+namespace DEP_Blazor_WASM.Services.States
 {
     public class AppState
     {
-        public event Action? OnLogout;
+        public event Func<Task>? OnLogout;
+        public event Func<Task>? OnLogin;  // Using Func<Task> to support async calls
 
         public string? LogoutReason { get; set; }
 
-        public void TriggerLogout(string reason)
+        public async Task TriggerLogout(string reason)
         {
-            LogoutReason = reason;
-            OnLogout?.Invoke();
+            if (OnLogout != null)
+            {
+                LogoutReason = reason;
+                await OnLogout?.Invoke();
+            }
+        }
+
+        public async Task TriggerLogin()
+        {
+            if (OnLogin != null)
+            {
+                //await Task.Delay(50);
+                await OnLogin.Invoke();
+            }
         }
     }
 }

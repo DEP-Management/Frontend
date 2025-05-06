@@ -2,7 +2,11 @@
 
 @inject AppState AppState
 @inject NavigationManager NavigationManager
+@inject CustomAuthStateProvider AuthStateProvider
 @inject IDialogService DialogService
+@inject ILocalStorageService LocalStorage
+@inject IAuthService AuthService
+@inject IUserService UserService
 
 @attribute [Authorize]
 
@@ -53,13 +57,20 @@
         _drawerOpen = !_drawerOpen;
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        Console.WriteLine("OnInit i MainLayout!");
         // Subscribe to OnLogout and handle logout when user is forcibly logged out through RefreshAsync in AuthService.
         AppState.OnLogout += HandleLogout;
+
+        // Subscribe to OnLogin and begin Dialog opening checks/opening dialog when successfully logged in from login component and setting name and role in appbar
+        AppState.OnLogin += ShouldTeacherReminderDialogOpen;
+
+        // Check if dialog should open in case user is already authenticated and bypasses login screen
+        await ShouldTeacherReminderDialogOpen();
     }
 
-    private async void HandleLogout()
+    private async Task HandleLogout()
     {
         var parameters = new DialogParameters<InformationDialog>
     {
@@ -76,9 +87,140 @@
         NavigationManager.NavigateTo("/login");
     }
 
+    private async Task ShouldTeacherReminderDialogOpen()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState?.User?.Identity?.IsAuthenticated == false)
+        {
+            return;
+        }
+
+        if (await ShouldOpenTeacherReminderDialog())
+        {
+            await ShowDialog();
+        }
+    }
+
+    private async Task<bool> ShouldOpenTeacherReminderDialog()
+    {
+        var storedFrequency = await LocalStorage.GetItemAsync<string>("teacherReminderFrequency");
+        var lastOpened = await LocalStorage.GetItemAsync<DateTime?>("teacherReminderLastOpened");
+
+        if (!Enum.TryParse(storedFrequency, out ReminderFrequency frequency))
+        {
+            frequency = ReminderFrequency.Hver_Session; // Default if invalid
+        }
+
+        if (frequency == ReminderFrequency.Aldrig)
+        {
+            return false; // Never show dialog
+        }
+
+        if (lastOpened == null || ShouldShowReminder(lastOpened.Value.Date, frequency))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool ShouldShowReminder(DateTime lastOpened, ReminderFrequency frequency)
+    {
+        DateTime today = DateTime.UtcNow.Date; // Only the date part
+        int daysElapsed = (today - lastOpened).Days; // Compare only the date part
+        return frequency switch
+        {
+            ReminderFrequency.Hver_Session => true,
+            ReminderFrequency.Dagligt => daysElapsed >= 1,
+            ReminderFrequency.Ugenligt => daysElapsed >= 7,
+            ReminderFrequency.Hver_anden_uge => daysElapsed >= 14,
+            ReminderFrequency.Månedligt => daysElapsed >= 30,
+            _ => false
+        };
+    }
+
+    private async Task ShowDialog()
+    {
+        // Get the current user's ID.
+        var userId = await AuthService.GetCurrentUserId();
+        if (userId is null)
+        {
+            return;
+        }
+
+        // Retrieve the dashboard data for the user.
+        var response = await UserService.GetUserDashboardByIdAsync(userId.Value);
+        if (!response.Success)
+        {
+            return;
+        }
+
+        // Choose the appropriate list of persons based on the user's role.
+        List<PersonViewModel>? personsToShow = response.Data!.UserRole switch
+        {
+            UserRole.Driftskoordinator => response.Data.OperationCoordinatorPersons,
+            UserRole.Uddannelsesleder => response.Data.EducationLeaderPersons,
+            UserRole.Pædagogisk_konsulent => response.Data.EducationalConsultantPersons,
+            _ => null
+        };
+
+        // If the list is null or empty, exit early.
+        if (personsToShow is null || !personsToShow.Any())
+        {
+            return;
+        }
+
+        // Check if there are any persons within the selected EndDate range
+        if (!await HasPersonsWithinEndDateRange(personsToShow))
+        {
+            return;
+        }
+
+        // wait a moment to ensure UI rendering is complete.
+        await Task.Delay(100);
+
+        // Build the dialog parameters.
+        var parameters = new DialogParameters<TeacherEndReminderDialog>
+        {
+            { x => x.Persons, personsToShow }
+        };
+
+        var options = new DialogOptions
+            {
+                FullWidth = true,
+                MaxWidth = MaxWidth.Large
+            };
+
+        // Show the dialog.
+        await DialogService.ShowAsync<TeacherEndReminderDialog>("Bemærk! Undervisere nær deres slut dato", parameters, options);
+    }
+
+    private async Task<bool> HasPersonsWithinEndDateRange(List<PersonViewModel> persons)
+    {
+        // Retrieve TeacherEndDateRange from local storage
+        var storedRange = await LocalStorage.GetItemAsync<string>("teacherEndDateRange");
+        if (!Enum.TryParse(storedRange, out TeacherEndDateRange endDateRange))
+        {
+            endDateRange = TeacherEndDateRange.Halvt_år; // Default if invalid
+        }
+
+        // Determine the end date threshold
+        DateTime thresholdDate = DateTime.UtcNow.AddMonths(endDateRange switch
+        {
+            TeacherEndDateRange.Halvt_år => 6,
+            TeacherEndDateRange.Et_år => 12,
+            TeacherEndDateRange.To_år => 24,
+            _ => 6 // Default fallback
+        });
+
+        // Check if any persons have an EndDate within the selected range
+        return persons.Any(p => p.EndDate <= thresholdDate);
+    }
+
     public void Dispose()
     {
         AppState.OnLogout -= HandleLogout;
+        AppState.OnLogin -= ShouldTeacherReminderDialogOpen;
     }
 
     MudTheme MyCustomTheme = new MudTheme()

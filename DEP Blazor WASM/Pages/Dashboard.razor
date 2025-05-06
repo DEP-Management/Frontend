@@ -32,6 +32,13 @@ else if (currentUser.UserRole == UserRole.Driftskoordinator || currentUser.UserR
                             <MudTextField T="string" Variant="Variant.Outlined" Label="Uddannelseschef" ReadOnly Value="@currentUser.EducationBossName" />
                         </MudItem>
                     }
+                    <MudItem xs="10">
+                        <MudButton Color="Color.Primary"
+                                   Variant="Variant.Filled"
+                                   OnClick="OpenTeacherReminderDialog">
+                            Undervisere nær slut dato
+                        </MudButton>
+                    </MudItem>
                 </MudGrid>
             </MudItem>
             <MudItem xs="9" Class="mt-0">
@@ -198,6 +205,29 @@ else
         var options = new DialogOptions { CloseOnEscapeKey = false, BackdropClick = false, };
 
         await dialogService.ShowAsync<ChangePasswordDialog>("Adgangskode udløbet.", parameters, options);
+    }
+
+    private async void OpenTeacherReminderDialog()
+    {
+        List<PersonViewModel> persons = new List<PersonViewModel>();
+        persons.AddRange(currentUser.EducationalConsultantPersons);
+        persons.AddRange(currentUser.EducationLeaderPersons);
+        persons.AddRange(currentUser.OperationCoordinatorPersons);
+
+        // Build the dialog parameters.
+        var parameters = new DialogParameters<TeacherEndReminderDialog>
+        {
+            { x => x.Persons, persons }
+        };
+
+        var options = new DialogOptions
+            {
+                FullWidth = true,
+                MaxWidth = MaxWidth.Large
+            };
+
+        // Show the dialog.
+        await dialogService.ShowAsync<TeacherEndReminderDialog>("Bemærk! Undervisere nær deres slut dato", parameters, options);
     }
 
     // Filter function to allow searching for Person properties in GenericDataTable component.
