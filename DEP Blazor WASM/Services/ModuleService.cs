@@ -40,6 +40,18 @@ namespace DEP_Blazor_WASM.Services
 
             return modules;
         }
+        public async Task<List<ModuleWithCourseViewModel>> GetModuleWithCoursesAsync(int id)
+        {
+            var response = await _httpClient.GetAsync("Module/modulewithcourse/" + id);
+
+            var modules = new List<ModuleWithCourseViewModel>();
+            if (response.IsSuccessStatusCode)
+            {
+                modules = await response.Content.ReadFromJsonAsync<List<ModuleWithCourseViewModel>>() ?? new List<ModuleWithCourseViewModel>();
+            }
+
+            return modules;
+        }
 
         public async Task<bool> AddModuleAsync(Module module)
         {

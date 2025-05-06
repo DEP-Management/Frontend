@@ -20,5 +20,6 @@ namespace DEP_Blazor_WASM.Services.Interfaces
         Task<List<User>> GetUsersByEducationBossId(int id);
         Task<List<EducationalLeaderViewModel>> GetEducationalLeaderAsync(int id);
         Task<List<EducationalBossViewModel>> GetEducationalBossesAsync();
+        Task<List<EducationalBossViewModel>> GetEducationalBossAsync(int id);
     }
 }
