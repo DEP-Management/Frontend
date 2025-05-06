@@ -219,5 +219,18 @@ namespace DEP_Blazor_WASM.Services
 
             return users;
         }
+
+        public async Task<List<EducationalBossViewModel>> GetEducationalBossAsync(int id)
+        {
+            var response = await _httpClient.GetAsync("users/selctedEducationBossExcel/" + id);
+
+            var users = new List<EducationalBossViewModel>();
+            if (response.IsSuccessStatusCode)
+            {
+                users = await response.Content.ReadFromJsonAsync<List<EducationalBossViewModel>>() ?? new List<EducationalBossViewModel>();
+            }
+
+            return users;
+        }
     }
 }

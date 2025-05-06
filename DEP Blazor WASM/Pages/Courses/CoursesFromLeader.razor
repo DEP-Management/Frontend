@@ -8,6 +8,9 @@
 @inject IModuleService moduleService
 @inject ICourseService courseService
 @inject IPersonCourseService personCourseService
+@inject IExcelFromBoss excelFromBoss
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
 
 <MudContainer Class="mt-8 px-8" MaxWidth="MaxWidth.False">
     <MudGrid>
@@ -169,18 +172,36 @@
 
     private async Task ExportBossesToExcel()
     {
+        var fileBytes = await excelFromBoss.GenerateBossExcelAsync(await userService.GetEducationalBossesAsync());
+        var fileName = "Eksport.xlsx";
+        await DownloadFile(fileName, fileBytes);
     }
 
     private async Task ExportSelectedBossTExcel()
     {
+        var fileBytes = await excelFromBoss.GenerateBossExcelAsync(await userService.GetEducationalBossAsync(bossId));
+        var fileName = "Eksport.xlsx";
+        await DownloadFile(fileName, fileBytes);
     }
 
     private async Task ExportSelectedLeaderToExcel()
     {
+        var fileBytes = await excelFromBoss.GenerateLeaderExcelAsync(await userService.GetEducationalLeaderAsync(leaderId));
+        var fileName = "Eksport.xlsx";
+        await DownloadFile(fileName, fileBytes);
     }
 
     private async Task ExportSelectedTeacherToExcel()
     {
+        var fileBytes = await excelFromBoss.GenerateTeacherExcelAsync(await personService.GetPersonExcelAsync(teacherId));
+        var fileName = "Eksport.xlsx";
+        await DownloadFile(fileName, fileBytes);
+    }
+
+    private async Task DownloadFile(string fileName, byte[] fileData)
+    {
+        var fileContent = Convert.ToBase64String(fileData);
+        await JS.InvokeVoidAsync("downloadFile", fileName, fileContent);
     }
 
     private async Task GetLeaderByBossIdOnClick(EducationalBossViewModel boss)
@@ -246,7 +267,7 @@
 
     private void exportBossesToExcel()
     {
-        // excelFromLeader.GenerateBossExcelAsync(bosses)
+        // excelFromBoss.GenerateBossExcelAsync(bosses)
     }
 
     // Methods for the table appearance and functionality

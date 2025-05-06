@@ -7,6 +7,9 @@
 @inject IUserService userService
 @inject IModuleService moduleService
 @inject ICourseService courseService
+@inject IExcelFromModule excelFromModule
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
 
 
 <MudContainer Class="mt-8 px-8" MaxWidth="MaxWidth.False">
@@ -149,14 +152,29 @@
 
     private async Task ExportModulesToExcel()
     {
+        var fileBytes = await excelFromModule.GenerateModuleExcelAsync(await moduleService.GetModulesWithCoursesAsync());
+        var fileName = "Eksport.xlsx";
+        await DownloadFile(fileName, fileBytes);
     }
 
     private async Task ExportSelectedModuleTExcel()
     {
+        var fileBytes = await excelFromModule.GenerateModuleExcelAsync(await moduleService.GetModuleWithCoursesAsync(moduleId));
+        var fileName = "Eksport.xlsx";
+        await DownloadFile(fileName, fileBytes);
     }
 
     private async Task ExportSelectedCourseToExcel()
     {
+        var fileBytes = await excelFromModule.GenerateCourseExcelAsync(await courseService.GetSelctedCourse(courseId));
+        var fileName = "Eksport.xlsx";
+        await DownloadFile(fileName, fileBytes);
+    }
+
+    private async Task DownloadFile(string fileName, byte[] fileData)
+    {
+        var fileContent = Convert.ToBase64String(fileData);
+        await JS.InvokeVoidAsync("downloadFile", fileName, fileContent);
     }
 
     private async Task GetCoursesByModuleIdOnClick(Module module)
