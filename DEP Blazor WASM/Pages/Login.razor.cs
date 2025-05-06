@@ -1,6 +1,7 @@
 ﻿using DEP_Blazor_WASM.Entities.RequestModels;
 using DEP_Blazor_WASM.Services;
 using DEP_Blazor_WASM.Services.Interfaces;
+using DEP_Blazor_WASM.Services.States;
 using DEP_Blazor_WASM.Shared.Dialogs;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -16,6 +17,7 @@ namespace DEP_Blazor_WASM.Pages
         [Inject] private IAuthService AuthService { get; set; } = default!;
         [Inject] private NavigationManager NavigationManager { get; set; } = default!;
         [Inject] private CustomAuthStateProvider AuthStateProvider { get; set; } = default!;
+        [Inject] private AppState AppState { get; set; } = default!;
 
         protected override async Task OnInitializedAsync()
         {
@@ -34,8 +36,9 @@ namespace DEP_Blazor_WASM.Pages
 
             if (loginResult)
             {
-                NavigationManager.NavigateTo("/"); // Redirect after login
-                StateHasChanged();
+                NavigationManager.NavigateTo("/");
+                await AppState.TriggerLogin(); // Notify MainLayout that login happened
+                Console.WriteLine("GEW!!!");
             }
             else
             {

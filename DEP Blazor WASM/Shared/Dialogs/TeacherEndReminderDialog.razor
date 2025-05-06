@@ -1,0 +1,168 @@
+﻿﻿@using MudBlazor
+@inject ILocalStorageService LocalStorage
+@inject IPersonService PersonService
+@inject NavigationManager NavigationManager
+
+<MudDialog ActionsClass="px-6">
+    <DialogContent>
+
+        <MudItem>
+            <MudItem xs="12" Class="d-flex mb-2">
+
+                <MudItem xs="5">
+                    <MudSelect T="ReminderFrequency" Label="Påmindelsesfrekvens" Variant="Variant.Outlined"
+                               Value="SelectedReminderFrequency" ValueChanged="ReminderFrequencyChanged" Required>
+                        @foreach (var frequency in Enum.GetValues<ReminderFrequency>())
+                        {
+                            <MudSelectItem T="ReminderFrequency" Value="@frequency">@frequency.ToString().Replace('_', ' ')</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudSpacer />
+
+                <MudItem xs="5">
+                    <MudSelect T="TeacherEndDateRange" Label="Vis undervisere med slut dato inden for" Variant="Variant.Outlined"
+                               Value="SelectedEndDateRange" ValueChanged="EndDateRangeChanged" Required>
+                        @foreach (var range in Enum.GetValues<TeacherEndDateRange>())
+                        {
+                            <MudSelectItem T="TeacherEndDateRange" Value="@range">@range.ToString().Replace('_', ' ')</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            </MudItem>
+
+
+        </MudItem>
+
+        <MudItem xs="12">
+            <GenericDataTable Height="400px" TItem="PersonViewModel" Items="@filteredPersons" TableTitle="Undervisere" Filter="FilterFunc">
+                <HeaderTemplate>
+                    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonViewModel, object>(x => x.Name)">Navn</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonViewModel, object>(x => x.Initials)">Initialer</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonViewModel, object>(x => x.DepartmentName!)">Afdeling</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonViewModel, object>(x => x.LocationName!)">Lokation</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonViewModel, object>(x => x.HiringDate)">Start dato</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonViewModel, object>(x => x.EndDate)">Slut dato</MudTableSortLabel></MudTh>
+                    <MudTh Style="text-align:center; max-width: 75px" Class="px-0"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonViewModel, object>(x => x.CompletedModules)">Færdige moduler</MudTableSortLabel></MudTh>
+                    <MudTh Style="text-align:center"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<PersonViewModel, object>(x => x.SvuApplied)">SVU</MudTableSortLabel></MudTh>
+                </HeaderTemplate>
+                <RowTemplate Context="person">
+                    <MudTd Style="max-width: 220px" Class="cursor-pointer truncate-text" title="@person.Name"
+                           @onclick="@(() => NavigationManager.NavigateTo($"/undervisere/profil/{person.PersonId}"))">
+                        @person.Name
+                    </MudTd>
+                    <MudTd>@person.Initials</MudTd>
+                    <MudTd Style="max-width: 200px" Class="truncate-text" title="@person.DepartmentName">@person.DepartmentName</MudTd>
+                    <MudTd>@person.LocationName</MudTd>
+                    <MudTd>@person.HiringDate.ToShortDateString()</MudTd>
+                    <MudTd Style="@person.EndDateStyle">
+                        @person.EndDate.ToShortDateString()
+                    </MudTd>
+                    <MudTd Style="text-align:center; max-width: 30px">@person.CompletedModules</MudTd>
+                    <MudTd Class="d-flex justify-center">
+                        <MudCheckBox T="bool" Value="@person.SvuApplied" Disabled="true" />
+                    </MudTd>
+                </RowTemplate>
+            </GenericDataTable>
+        </MudItem>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Submit" Variant="Variant.Filled" Color="Color.Primary">Luk</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public List<PersonViewModel> Persons { get; set; } = new();
+
+    private ReminderFrequency SelectedReminderFrequency { get; set; }
+    private TeacherEndDateRange SelectedEndDateRange { get; set; }
+
+    // Computed property to filter persons based on the selected end date range
+    private IEnumerable<PersonViewModel> filteredPersons => Persons
+        .Where(p => p.EndDate <= DateTime.UtcNow.AddMonths(SelectedEndDateRange switch
+        {
+            TeacherEndDateRange.Halvt_år => 6,
+            TeacherEndDateRange.Et_år => 12,
+            TeacherEndDateRange.To_år => 24,
+            _ => 6 // Default fallback
+        }))
+        .ToList();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetStoredFrequency();
+        await GetStoredEndDateRange();
+        await LocalStorage.SetItemAsync("teacherReminderLastOpened", DateTime.UtcNow.Date);
+        ComputeEndDateStyles();
+    }
+
+    private void ComputeEndDateStyles()
+    {
+        if (Persons is null || Persons.Count == 0)
+        {
+            return;
+        }
+
+        PersonService.ComputeEndDateStyles(Persons);
+    }
+
+    private async Task GetStoredFrequency()
+    {
+        var storedFrequency = await LocalStorage.GetItemAsync<string>("teacherReminderFrequency");
+        if (!string.IsNullOrWhiteSpace(storedFrequency) && Enum.TryParse(storedFrequency, out ReminderFrequency parsedFrequency))
+        {
+            SelectedReminderFrequency = parsedFrequency;
+        }
+        else
+        {
+            SelectedReminderFrequency = ReminderFrequency.Hver_Session; // Default if invalid
+            await LocalStorage.SetItemAsync("teacherReminderFrequency", SelectedReminderFrequency.ToString());
+        }
+    }
+
+    private async void ReminderFrequencyChanged(ReminderFrequency frequency)
+    {
+        SelectedReminderFrequency = frequency;
+        await LocalStorage.SetItemAsync("teacherReminderFrequency", SelectedReminderFrequency.ToString());
+    }
+
+    private async Task GetStoredEndDateRange()
+    {
+        var storedRange = await LocalStorage.GetItemAsync<string>("teacherEndDateRange");
+        if (!string.IsNullOrWhiteSpace(storedRange) && Enum.TryParse(storedRange, out TeacherEndDateRange parsedRange))
+        {
+            SelectedEndDateRange = parsedRange;
+        }
+        else
+        {
+            SelectedEndDateRange = TeacherEndDateRange.Halvt_år; // Default if invalid
+            await LocalStorage.SetItemAsync("teacherEndDateRange", SelectedEndDateRange.ToString());
+        }
+    }
+
+    private async void EndDateRangeChanged(TeacherEndDateRange range)
+    {
+        SelectedEndDateRange = range;
+        await LocalStorage.SetItemAsync("teacherEndDateRange", SelectedEndDateRange.ToString());
+    }
+
+    private async Task Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(SelectedReminderFrequency));
+    }
+
+    // Filter function to allow searching for Person properties in GenericDataTable component.
+    private bool FilterFunc(PersonViewModel item, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        return item.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase);
+    }
+}
