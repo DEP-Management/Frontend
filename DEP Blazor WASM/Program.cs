@@ -62,6 +62,7 @@ builder.Services.AddScoped<IPersonService, PersonService>();
 builder.Services.AddScoped<IPersonCourseService, PersonCourseService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IObjectComparisonService, ObjectComparisonService>();
+builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 builder.Services.AddScoped<CustomAuthStateProvider>();
 builder.Services.AddSingleton<AppState>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider => provider.GetRequiredService<CustomAuthStateProvider>());
