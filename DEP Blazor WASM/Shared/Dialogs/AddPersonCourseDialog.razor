@@ -22,7 +22,7 @@ else
             </MudSelect>
 
             @* Selected Module's Courses Dropdown *@
-            @if (SelectedModule is not null)
+            @if (SelectedModule is not null & FilteredCourses.Count != 0)
             {
                 <MudSelect Disabled="FilteredCourses.Count == 0 || ModulePassed == true" Class="mb-3" Label="Kursus" Placeholder="Vælg kursus" Variant="Variant.Outlined"
                            T="Course" Value="SelectedCourse" ValueChanged="OnCourseChanged" Required>
