@@ -135,7 +135,6 @@
 
     private async Task Submit()
     {
-        Console.WriteLine("Role: " + NewUser.UserRole);
         var response = await UserService.AddUserAsync<UserViewModel>(NewUser);
 
         if (response.Success)
