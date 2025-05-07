@@ -3,11 +3,6 @@
 @using DEP_Blazor_WASM.Services.Interfaces
 
 <MudContainer>
-    @if (ShowSecondViewSwitch)
-    {
-        <MudSwitch Color="Color.Primary" ValueChanged="ChangeView" Value="SecondViewSelected" T="bool"
-                   Label="Vis fra uddannelsesleder" Class="mb-3" />
-    }
     @if (ShowCourseTypeFilter)
     {
         <MudItem Class="mb-3">
@@ -92,6 +87,18 @@
             </MudSelect>
         </MudItem>
     }
+    @if (ShowModuleFilter)
+    {
+        <MudItem Class="mb-3">
+            <MudSelect T="Module" Label="Modul" Variant="Variant.Outlined" SelectAll="true" MultiSelection="true" @bind-SelectedValues="SelectedModules" FullWidth="false"
+                       MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                @foreach (var module in Modules)
+                {
+                    <MudSelectItem T="Module" Value="@module">@module.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    }
     
     
 
@@ -109,6 +116,7 @@
     [Parameter] public bool ShowOperationCoordinatorFilter { get; set; } = false;
     [Parameter] public bool ShowEducationalConsultantFilter { get; set; } = false;
     [Parameter] public bool ShowFileTagFilter { get; set; } = false;
+    [Parameter] public bool ShowModuleFilter { get; set; } = false;
     [Parameter] public bool ShowStatusFilter { get; set; } = false;
     [Parameter] public bool ShowSecondViewSwitch { get; set; } = false;
     [Parameter] public bool ShowCourseTypeFilter { get; set; } = false;
@@ -117,29 +125,24 @@
     [Parameter] public List<User> OperationCoordinators { get; set; } = new();
     [Parameter] public List<User> EducationalConsultants { get; set; } = new();
     [Parameter] public List<FileTagViewModel> FileTags { get; set; } = new();
+    [Parameter] public List<Module> Modules { get; set; } = new();
     [Parameter] public EventCallback<IEnumerable<Department>> SelectedDepartmentsChanged { get; set; }
     [Parameter] public EventCallback<IEnumerable<Location>> SelectedLocationsChanged { get; set; }
     [Parameter] public EventCallback<IEnumerable<User>> SelectedOperationCoordinatorsChanged { get; set; }
     [Parameter] public EventCallback<IEnumerable<User>> SelectedEducationalConsultantsChanged { get; set; }
     [Parameter] public EventCallback<IEnumerable<FileTagViewModel>> SelectedFileTagsChanged { get; set; }
+    [Parameter] public EventCallback<IEnumerable<Module>> SelectedModulesChanged { get; set; }
     [Parameter] public EventCallback<IEnumerable<Status?>> SelectedStatusesChanged { get; set; }
     [Parameter] public EventCallback<IEnumerable<CourseType?>> SelectedCourseTypesChanged { get; set; }
-    [Parameter] public EventCallback<bool> SecondViewSelectionChanged { get; set; }
 
-    private bool SecondViewSelected { get; set; } = false;
     private IEnumerable<Department> SelectedDepartments { get; set; } = new List<Department>();
     private IEnumerable<Location> SelectedLocations { get; set; } = new List<Location>();
     private IEnumerable<User> SelectedOperationCoordinators { get; set; } = new List<User>();
     private IEnumerable<User> SelectedEducationalConsultants { get; set; } = new List<User>();
     private IEnumerable<FileTagViewModel> SelectedFileTags { get; set; } = new List<FileTagViewModel>();
+    private IEnumerable<Module> SelectedModules { get; set; } = new List<Module>();
     private IEnumerable<Status?> SelectedStatuses { get; set; } = new List<Status?>();
     private IEnumerable<CourseType?> SelectedCourseTypes { get; set; } = new List<CourseType?>();
-
-    private async Task ChangeView(bool isChecked)
-    {
-        SecondViewSelected = isChecked;
-        await SecondViewSelectionChanged.InvokeAsync(isChecked);
-    }
 
     private void ClearFilters()
     {
@@ -148,6 +151,7 @@
         SelectedOperationCoordinators = new List<User>();
         SelectedEducationalConsultants = new List<User>();
         SelectedFileTags = new List<FileTagViewModel>();
+        SelectedModules = new List<Module>();
         SelectedStatuses = new List<Status?>();
         SelectedCourseTypes = new List<CourseType?>();
         UpdateFilters();
@@ -162,6 +166,7 @@
         SelectedFileTagsChanged.InvokeAsync(SelectedFileTags);
         SelectedStatusesChanged.InvokeAsync(SelectedStatuses);
         SelectedCourseTypesChanged.InvokeAsync(SelectedCourseTypes);
+        SelectedModulesChanged.InvokeAsync(SelectedModules);
     }
 
     private string GetMultiSelectionText(List<string> selectedValues)
