@@ -1,0 +1,105 @@
+﻿@page "/books"
+
+@inject IBookService bookService
+@inject ISnackbar Snackbar
+
+<MudContainer Class="pa-0" MaxWidth="MaxWidth.False">
+    <MudGrid>
+        <MudItem xs="12" sm="12" md="10">
+            <MudTable Items="@books" Height="calc(100vh - 188px)" AllowUnsorted="false" Striped="true" Dense="true" Hover="true" CanCancelEdit="true" SortLabel="Sort By"
+                      CommitEditTooltip="Gem ændring" RowEditPreview="BackupItem" RowEditCancel="ResetItemToOriginalValues"
+                      RowEditCommit="ItemHasBeenCommitted" IsEditRowSwitchingBlocked="true"
+                      ApplyButtonPosition="TableApplyButtonPosition.Start" EditButtonPosition="TableEditButtonPosition.Start" EditTrigger="TableEditTrigger.EditButton">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Bøger</MudText>
+                </ToolBarContent>
+                <ColGroup>
+                    <col style="width:25px;" />
+                    <col style="width:33%;" />
+                    <col style="width:33%;" />
+                    <col style="width:33%;" />
+                </ColGroup>
+                <HeaderContent>
+                    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<Book, object>(x => x.Name)">Navn</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<Book, object>(x => x.Module?.Name)">Modul</MudTableSortLabel></MudTh>
+                    <MudTh>
+                        <MudTableSortLabel SortBy="new Func<Book, object>(x => (object)x.Amount)">Mængde</MudTableSortLabel>
+                    </MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Name">@context.Name</MudTd>
+                    <MudTd DataLabel="Module">@context.Module?.Name</MudTd>
+                    <MudTd DataLabel="Amaunt" Class="truncate-text" Style="max-width: 350px">@context.Amount</MudTd>
+                </RowTemplate>
+                <RowEditingTemplate>
+                    <MudTd DataLabel="Name">@context.Name</MudTd>
+                    <MudTd DataLabel="Module">@context.Module?.Name</MudTd>
+                    <MudTd DataLabel="Amaunt" Class="truncate-text" Style="max-width: 350px">
+                        <MudNumericField @bind-Value="@context.Amount"
+                                         Style="width: 100%;"
+                                         HideSpinButtons="true"
+                                         Immediate="true"/>
+                    </MudTd>
+                </RowEditingTemplate>
+                <PagerContent>
+                    <MudTablePager />
+                </PagerContent>
+                <EditButtonContent Context="button">
+                    <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Edit" Class="pa-0" OnClick="@button.ButtonAction" Disabled="@button.ButtonDisabled" />
+                </EditButtonContent>
+            </MudTable>
+        </MudItem>
+        <MudItem xs="2" sm="2" md="2" Style="padding: 5px;">
+            <MudPaper Elevation="2" Class="pa-4">
+                <FilterComponent ShowModuleFilter="true"
+                                 Modules="modules"
+                                 SelectedModulesChanged="OnModulesChanged" />
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private List<Book> books = new List<Book>();
+    private int amauntBeforeEdit;
+    private List<Module> modules = new List<Module>();
+    private IEnumerable<Module> selectedModules = new List<Module>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        books = await bookService.GetBooksAsync();
+    }
+
+    private void OnModulesChanged(IEnumerable<Module> modules)
+    {
+        selectedModules = modules;
+    }
+
+    private void BackupItem(object book)
+    {
+        amauntBeforeEdit = ((Book)book).Amount;
+    }
+
+    private void ResetItemToOriginalValues(object book)
+    {
+        ((Book)book).Amount = amauntBeforeEdit;
+    }
+
+    private async void ItemHasBeenCommitted(object book)
+    {
+        // // Call the service to update the person course in the database
+        bool updateSuccess = await bookService.UpdateBookAsync((Book)book);
+
+        // Show a message to the user based on whether the update was successful
+        if (updateSuccess)
+        {
+            // Display success message
+            Snackbar.Add("Bøgens mængde blev opdateret", Severity.Success);
+        }
+        else
+        {
+            // Display error message
+            Snackbar.Add("Bøgens mængde kunne ikke opdateres", Severity.Error);
+        }
+    }
+}
