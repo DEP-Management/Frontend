@@ -42,6 +42,17 @@ namespace DEP_Blazor_WASM.Services
             }
         }
 
+        public async Task<bool> ReassignUserAsync(ReassignUserViewModel model)
+        {
+            var response = await _httpClient.PostAsJsonAsync("users/reassign-user", model);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<bool>();
+            }
+
+            return false;
+        }
 
         public async Task<List<User>> GetUsersAsync()
         {

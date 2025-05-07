@@ -8,6 +8,7 @@ namespace DEP_Blazor_WASM.Services.Interfaces
     public interface IUserService
     {
         Task<ApiResponse<T>> AddUserAsync<T>(AddUserRequest model);
+        Task<bool> ReassignUserAsync(ReassignUserViewModel model);
         Task<List<User>> GetUsersAsync();
         Task<List<User>> GetUsersByUserRoleLageAsync(UserRole userRole);
         Task<ApiResponse<User>> GetUserByIdAsync(int id);

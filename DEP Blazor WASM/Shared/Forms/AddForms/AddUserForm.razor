@@ -60,7 +60,7 @@
 
             <MudItem xs="12" md="6">
                 <MudSelect T="UserRole" Label="Brugerrolle" Variant="Variant.Outlined"
-                           Value="NewUser.UserRole" ValueChanged="UserRoleChanged" Required>
+                           Value="NewUser.UserRole" ValueChanged="UserRoleChanged">
                     @foreach (var role in Enum.GetValues<UserRole>())
                     {
                         <MudSelectItem T="UserRole" Value="@role">@role.ToString().Replace('_', ' ')</MudSelectItem>
@@ -135,6 +135,7 @@
 
     private async Task Submit()
     {
+        Console.WriteLine("Role: " + NewUser.UserRole);
         var response = await UserService.AddUserAsync<UserViewModel>(NewUser);
 
         if (response.Success)
