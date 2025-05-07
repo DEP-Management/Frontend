@@ -29,7 +29,7 @@ else
                     @foreach (var course in FilteredCourses.OrderBy(x => x.CourseType).ThenBy(x => x.StartDate))
                     {
                         <MudSelectItem T="Course" Value="@course">
-                            <MudText><b>@course.CourseType.ToString() |</b> @course.StartDate.ToShortDateString() - @course.EndDate.ToShortDateString()</MudText>
+                            <MudText><b>#@course.CourseNumber | @course.CourseType.ToString() |</b> @course.StartDate.ToShortDateString() - @course.EndDate.ToShortDateString()</MudText>
                         </MudSelectItem>
                     }
                 </MudSelect>
@@ -135,7 +135,6 @@ else
         {
             Snackbar.Add("Underviser tilføjet til kurset.", Severity.Success);
             newPersonCourse.Course = SelectedCourse;
-            newPersonCourse.Person = Person;
 
             MudDialog.Close(DialogResult.Ok(newPersonCourse));
         }
