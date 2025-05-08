@@ -1,12 +1,13 @@
 ﻿@page "/books"
 
 @inject IBookService bookService
+@inject IModuleService moduleService
 @inject ISnackbar Snackbar
 
 <MudContainer Class="pa-0" MaxWidth="MaxWidth.False">
     <MudGrid>
         <MudItem xs="12" sm="12" md="10">
-            <MudTable Items="@books" Height="calc(100vh - 188px)" AllowUnsorted="false" Striped="true" Dense="true" Hover="true" CanCancelEdit="true" SortLabel="Sort By"
+            <MudTable Items="@filteredBooks" Height="calc(100vh - 188px)" AllowUnsorted="false" Striped="true" Dense="true" Hover="true" CanCancelEdit="true" SortLabel="Sort By"
                       CommitEditTooltip="Gem ændring" RowEditPreview="BackupItem" RowEditCancel="ResetItemToOriginalValues"
                       RowEditCommit="ItemHasBeenCommitted" IsEditRowSwitchingBlocked="true"
                       ApplyButtonPosition="TableApplyButtonPosition.Start" EditButtonPosition="TableEditButtonPosition.Start" EditTrigger="TableEditTrigger.EditButton">
@@ -49,7 +50,7 @@
                 </EditButtonContent>
             </MudTable>
         </MudItem>
-        <MudItem xs="2" sm="2" md="2" Style="padding: 5px;">
+        <MudItem xs="2" sm="2" md="2" Class="ps-1" >
             <MudPaper Elevation="2" Class="pa-4">
                 <FilterComponent ShowModuleFilter="true"
                                  Modules="modules"
@@ -65,9 +66,15 @@
     private List<Module> modules = new List<Module>();
     private IEnumerable<Module> selectedModules = new List<Module>();
 
+    private IEnumerable<Book> filteredBooks => books
+    .Where(p =>
+        (!selectedModules.Any() || selectedModules.Any(d => d.ModuleId == p.ModuleId))
+    );
+
     protected override async Task OnInitializedAsync()
     {
         books = await bookService.GetBooksAsync();
+        modules = await moduleService.GetModulesAsync();
     }
 
     private void OnModulesChanged(IEnumerable<Module> modules)
