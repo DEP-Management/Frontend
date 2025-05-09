@@ -22,6 +22,8 @@
                 <MudAppBar Elevation="1" Color="Color.Primary">
                     <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
                     <MudImage Class="pl-4" Src="images/toolbar-logo-dark.png" Height="64" Width="328" Alt="TEC Logo" ObjectFit="ObjectFit.Fill" />
+                    <MudSpacer />
+                    <MudText>@CurrentUserNameAndRole</MudText>
                 </MudAppBar>
                 <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
                     <NavMenu />
@@ -51,6 +53,7 @@
     // [CascadingParameter] IModalService Modal { get; set; } = default!;
 
     bool _drawerOpen = true;
+    private string CurrentUserNameAndRole { get; set; } = string.Empty;
 
     void DrawerToggle()
     {
@@ -65,9 +68,13 @@
 
         // Subscribe to OnLogin and begin Dialog opening checks/opening dialog when successfully logged in from login component and setting name and role in appbar
         AppState.OnLogin += ShouldTeacherReminderDialogOpen;
+        AppState.OnLogin += SetAppBarNameAndUserRole;
 
         // Check if dialog should open in case user is already authenticated and bypasses login screen
         await ShouldTeacherReminderDialogOpen();
+
+        // Get Name and UserRole for the appbar
+        await SetAppBarNameAndUserRole();
     }
 
     private async Task HandleLogout()
@@ -85,6 +92,24 @@
         var result = await dialog.Result;
 
         NavigationManager.NavigateTo("/login");
+    }
+
+    private async Task SetAppBarNameAndUserRole()
+    {
+        Console.WriteLine("AYO SETAPP CALLED");
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState?.User?.Identity?.IsAuthenticated == false)
+        {
+            Console.WriteLine("AYO NOT AUTHENTICATED");
+            return;
+        }
+        var currentName = await AuthService.GetCurrentUserName();
+        var currentUserRole = await AuthService.GetCurrentUserRole();
+
+        CurrentUserNameAndRole = $"{currentName} | {currentUserRole?.ToString().Replace('_', ' ')}";
+
+        // Required refresh to update UI.
+        StateHasChanged();
     }
 
     private async Task ShouldTeacherReminderDialogOpen()
