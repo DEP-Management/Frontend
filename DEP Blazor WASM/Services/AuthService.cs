@@ -171,6 +171,15 @@ namespace DEP_Blazor_WASM.Services
             return userRole;
         }
 
+        public async Task<string> GetCurrentUserName()
+        {
+            var authState = await _authStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            var nameClaim = user.FindFirst(c => c.Type == ClaimTypes.Name)?.Value;
+
+            return nameClaim ?? string.Empty;
+        }
 
     }
 }
