@@ -100,15 +100,15 @@
         <MudItem xs="2" sm="2" md="2" Style="padding: 0;">
             <MudPaper Elevation="2" Class="pa-4">
                 <FilterComponent ShowDepartmentFilter="true"
-                                 ShowLocationFilter="true"
-                                 ShowCourseTypeFilter="teacherId != 0"
-                                 ShowStatusFilter="teacherId != 0"
-                                 Departments="departments"
-                                 Locations="locations"
-                                 SelectedDepartmentsChanged="OnDepartmentsChanged"
-                                 SelectedLocationsChanged="OnLocationsChanged"
-                                 SelectedCourseTypesChanged="OnCourseTypeChange"
-                                 SelectedStatusesChanged="OnStatusChange" />
+                ShowLocationFilter="true"
+                ShowCourseTypeFilter="teacherId != 0"
+                ShowStatusFilter="teacherId != 0"
+                Departments="departments"
+                Locations="locations"
+                SelectedDepartmentsChanged="OnDepartmentsChanged"
+                SelectedLocationsChanged="OnLocationsChanged"
+                SelectedCourseTypesChanged="OnCourseTypeChange"
+                SelectedStatusesChanged="OnStatusChange" />
             </MudPaper>
             <MudPaper Elevation="2" Class="pa-4">
                 <MudMenu Label="Eksporter til Excel" EndIcon="@Icons.Material.Filled.KeyboardArrowDown" Style="display: flex; justify-content: center;">
@@ -229,7 +229,8 @@
         }
         if (leaderId != leader.UserId)
         {
-            persons = await personService.GetPersonsByCourseIdAsync(leader.UserId);
+            // persons = await personService.GetPersonsByCourseIdAsync(leader.UserId);
+            persons = await personService.GetPersonsExcelAsync(leader.UserId);
             leaderId = leader.UserId;
             Console.WriteLine(persons);
         }

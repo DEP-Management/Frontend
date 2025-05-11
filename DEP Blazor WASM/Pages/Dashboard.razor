@@ -190,7 +190,7 @@ else
 
     private async void CheckPasswordExpiryDate(DateTime expiryDate)
     {
-        DateTime todaysDate = new DateTime();
+        DateTime todaysDate = DateTime.Now;
 
         if (expiryDate > todaysDate)
         {

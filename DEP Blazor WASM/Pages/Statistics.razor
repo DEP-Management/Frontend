@@ -42,7 +42,8 @@
                 </MudItem>
 
                 <!-- Wrap Chart in a div to apply styles -->
-                <div style="flex-grow: 1; display: flex; max-width: 100%;">
+                <div style="flex-grow: 1; display: flex; width: 100%; overflow: hidden;">
+
                     @if (_barConfig is null)
                     {
                         <MudPaper Elevation="0" Width="100%" Height="75vh" Class="d-flex justify-center align-center">
@@ -58,10 +59,13 @@
                     }
                     else
                     {
-                        <div style="flex-grow: 1;">
-                            <!-- Apply styles here instead of Chart -->
-                            <Chart Config="_barConfig" />
+                        <div style="flex-grow: 1; display: flex; justify-content: center; align-items: center; overflow-x: hidden; width: 100%;">
+                            <div style="width: 100%; max-width: 1400px;">
+                                <!-- Adjust max-width as needed -->
+                                <Chart Config="_barConfig" />
+                            </div>
                         </div>
+
                     }
                 </div>
             </MudPaper>
