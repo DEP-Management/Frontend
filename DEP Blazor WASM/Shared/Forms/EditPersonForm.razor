@@ -17,17 +17,19 @@ else
 
                 <!-- General Info -->
                 <MudTextField T="string" Label="Navn" @bind-Value="EditablePerson.Name"
-                              Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
-                              Disabled="!IsEditing" Required="true" />
+                Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
+                Disabled="!IsEditing" Required="true" />
 
                 <MudTextField T="string" Label="Initialer" @bind-Value="EditablePerson.Initials"
-                              Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
-                              Disabled="!IsEditing" />
+                Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
+                Disabled="!IsEditing" />
 
                 <!-- Dropdowns -->
                 <MudItem xs="12">
-                    <MudSelect T="int?" Label="Afdeling" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="!IsEditing"
-                               @bind-Value="EditablePerson.DepartmentId" Clearable>
+                    <MudSelect T="int?" Label="Afdeling" @bind-Value="EditablePerson.DepartmentId"
+                    Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
+                    Disabled="!IsEditing" Clearable=true Placeholder="- Ingen Afdeling -">
+                        <MudSelectItem T="int?" Value="null">- Ingen -</MudSelectItem>
                         @foreach (var dep in Departments)
                         {
                             <MudSelectItem T="int?" Value="dep.DepartmentId">@dep.Name</MudSelectItem>
@@ -35,62 +37,62 @@ else
                     </MudSelect>
                 </MudItem>
 
-                <MudSelect T="Location" Label="Lokation" @bind-Value="EditablePerson.Location"
-                           Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
-                           Disabled="!IsEditing" Clearable=true Placeholder="- Ingen Lokation -">
-                    <MudSelectItem T="Location" Value="null">- Ingen -</MudSelectItem>
+                <MudSelect T="int?" Label="Lokation" @bind-Value="EditablePerson.LocationId"
+                Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
+                Disabled="!IsEditing" Clearable=true Placeholder="- Ingen Lokation -">
+                    <MudSelectItem T="int?" Value="null">- Ingen -</MudSelectItem>
                     @foreach (var location in Locations)
                     {
-                        <MudSelectItem T="Location" Value="location">@location.Name</MudSelectItem>
+                        <MudSelectItem T="int?" Value="location.LocationId">@location.Name</MudSelectItem>
                     }
                 </MudSelect>
 
-                <MudSelect T="User" Label="Driftskoordinator"
-                           @bind-Value="EditablePerson.OperationCoordinator"
-                           Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
-                           Disabled="!IsEditing" Clearable="true" Placeholder="- Ingen Drifskoordinator -">
-                    <MudSelectItem T="User" Value="null">- Ingen -</MudSelectItem>
+                <MudSelect T="int?" Label="Driftskoordinator"
+                @bind-Value="EditablePerson.OperationCoordinatorId"
+                Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
+                Disabled="!IsEditing" Clearable="true" Placeholder="- Ingen Drifskoordinator -">
+                    <MudSelectItem T="int?" Value="null">- Ingen -</MudSelectItem>
                     @foreach (var coordinator in Users.Where(u => u.UserRole == UserRole.Driftskoordinator))
                     {
-                        <MudSelectItem T="User" Value="coordinator">@coordinator.Name</MudSelectItem>
+                        <MudSelectItem T="int?" Value="coordinator.UserId">@coordinator.Name</MudSelectItem>
                     }
                 </MudSelect>
 
-                <MudSelect T="User" Label="Pædagogisk Konsulent"
-                           @bind-Value="EditablePerson.EducationalConsultant"
-                           Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
-                           Disabled="!IsEditing" Clearable="true" Placeholder="- Ingen Pædagogisk Konsulent -">
-                    <MudSelectItem T="User" Value="null">- Ingen -</MudSelectItem>
+                <MudSelect T="int?" Label="Pædagogisk Konsulent"
+                @bind-Value="EditablePerson.EducationalConsultantId"
+                Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
+                Disabled="!IsEditing" Clearable="true" Placeholder="- Ingen Pædagogisk Konsulent -">
+                    <MudSelectItem T="int?" Value="null">- Ingen -</MudSelectItem>
                     @foreach (var consultant in Users.Where(u => u.UserRole == UserRole.Pædagogisk_konsulent))
                     {
-                        <MudSelectItem T="User" Value="consultant">@consultant.Name</MudSelectItem>
+                        <MudSelectItem T="int?" Value="consultant.UserId">@consultant.Name</MudSelectItem>
                     }
                 </MudSelect>
 
-                <MudSelect T="User" Label="Uddannelsesleder"
-                           @bind-Value="EditablePerson.EducationalLeader"
-                           Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
-                           Disabled="!IsEditing" Clearable="true" Placeholder="- Ingen Uddannelsesleder -">
-                    <MudSelectItem T="User" Value="null">- Ingen -</MudSelectItem>
+                <MudSelect T="int?" Label="Uddannelsesleder"
+                @bind-Value="EditablePerson.EducationalLeaderId"
+                Class="mb-3" Variant="Variant.Outlined" Margin="Margin.Dense"
+                Disabled="!IsEditing" Clearable="true" Placeholder="- Ingen Uddannelsesleder -">
+                    <MudSelectItem T="int?" Value="null">- Ingen -</MudSelectItem>
                     @foreach (var leader in Users.Where(u => u.UserRole == UserRole.Uddannelsesleder))
                     {
-                        <MudSelectItem T="User" Value="leader">@leader.Name</MudSelectItem>
+                        <MudSelectItem T="int?" Value="leader.UserId">@leader.Name</MudSelectItem>
                     }
                 </MudSelect>
 
 
                 <!-- Date Pickers -->
                 <MudDatePicker Label="Start Dato" @bind-Date="EditablePersonHiringDate"
-                               Class="mb-3" Disabled="!IsEditing" Required />
+                Class="mb-3" Disabled="!IsEditing" Required />
                 <MudDatePicker Label="Slut Dato" @bind-Date="EditablePersonEndDate"
-                               Class="mb-3" Disabled="!IsEditing" Required />
+                Class="mb-3" Disabled="!IsEditing" Required />
 
                 <!-- Switches for boolean properties -->
                 <MudItem xs="12" Class="d-flex justify-space-around">
                     <MudSwitch @bind-Value="EditablePerson.SvuEligible" Color="Color.Primary"
-                               Label="SVU Berettiget" Disabled="!IsEditing" Class="mb-3" />
+                    Label="SVU Berettiget" Disabled="!IsEditing" Class="mb-3" />
                     <MudSwitch @bind-Value="EditablePerson.SvuApplied" Color="Color.Primary"
-                               Label="SVU Søgt" Disabled="!IsEditing" Class="mb-3" />
+                    Label="SVU Søgt" Disabled="!IsEditing" Class="mb-3" />
                 </MudItem>
 
             </MudCardContent>
@@ -169,17 +171,12 @@ else
         OriginalPerson.Name = EditablePerson!.Name;
         OriginalPerson.Initials = EditablePerson.Initials;
         OriginalPerson.DepartmentId = EditablePerson.DepartmentId;
-        OriginalPerson.LocationId = EditablePerson.Location?.LocationId;
+        OriginalPerson.LocationId = EditablePerson.LocationId;
         OriginalPerson.EducationalConsultantId = EditablePerson.EducationalConsultantId;
         OriginalPerson.EducationalLeaderId = EditablePerson.EducationalLeaderId;
         OriginalPerson.OperationCoordinatorId = EditablePerson.OperationCoordinatorId;
         OriginalPerson.SvuEligible = EditablePerson.SvuEligible;
         OriginalPerson.SvuApplied = EditablePerson.SvuApplied;
-        OriginalPerson.EducationalConsultant = EditablePerson.EducationalConsultant;
-        OriginalPerson.EducationalLeader = EditablePerson.EducationalLeader;
-        OriginalPerson.OperationCoordinator = EditablePerson.OperationCoordinator;
-        OriginalPerson.Department = EditablePerson.Department;
-        OriginalPerson.Location = EditablePerson.Location;
 
         //Fallback to original value for dates if input is null.
         OriginalPerson.HiringDate = EditablePersonHiringDate ?? OriginalPerson.HiringDate;
