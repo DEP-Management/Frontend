@@ -7,6 +7,12 @@
 @inject ILocationService locationService
 @inject IUserService userService
 
+@attribute [Authorize(Roles =
+    nameof(UserRole.Driftskoordinator) + "," +
+    nameof(UserRole.Pædagogisk_konsulent) + "," +
+    nameof(UserRole.Uddannelseschef) + "," +
+    nameof(UserRole.Uddannelsesleder) + "," +
+    nameof(UserRole.Administrator))]
 
 <MudContainer Class="pa-0" MaxWidth="MaxWidth.False">
     <MudGrid>

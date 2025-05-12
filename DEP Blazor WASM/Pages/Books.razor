@@ -4,6 +4,12 @@
 @inject IModuleService moduleService
 @inject ISnackbar Snackbar
 
+@attribute [Authorize(Roles =
+    nameof(UserRole.Driftskoordinator) + "," +
+    nameof(UserRole.Pædagogisk_konsulent) + "," +
+    nameof(UserRole.Administrator))]
+
+
 <MudContainer Class="pa-0" MaxWidth="MaxWidth.False">
     <MudGrid>
         <MudItem xs="12" sm="12" md="10">
