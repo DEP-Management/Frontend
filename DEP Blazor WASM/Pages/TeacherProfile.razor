@@ -7,6 +7,13 @@
 @inject IDialogService DialogService
 @inject IFileService fileService
 
+@attribute [Authorize(Roles =
+    nameof(UserRole.Driftskoordinator) + "," +
+    nameof(UserRole.Pædagogisk_konsulent) + "," +
+    nameof(UserRole.Uddannelseschef) + "," +
+    nameof(UserRole.Uddannelsesleder) + "," +
+    nameof(UserRole.Administrator))]
+
 @if (person == null)
 {
     <p>Loading...</p>

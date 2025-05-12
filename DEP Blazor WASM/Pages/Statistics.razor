@@ -10,6 +10,13 @@
 @inject IStatisticsService _statisticsService
 @inject IModuleService _moduleService
 
+@attribute [Authorize(Roles =
+    nameof(UserRole.Driftskoordinator) + "," +
+    nameof(UserRole.Pædagogisk_konsulent) + "," +
+    nameof(UserRole.Human_Resources) + "," +
+    nameof(UserRole.Administrator))]
+
+
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-0" Style="height: calc(100vh - 64px);">
     <MudTabs Centered="true" Outlined="true">
         <MudTabPanel Text="Søjlediagram">

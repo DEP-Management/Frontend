@@ -11,6 +11,15 @@
 @inject IJSRuntime JS
 @inject NavigationManager NavigationManager
 
+@attribute [Authorize(Roles =
+    nameof(UserRole.Driftskoordinator) + "," +
+    nameof(UserRole.Pædagogisk_konsulent) + "," +
+    nameof(UserRole.Uddannelseschef) + "," +
+    nameof(UserRole.Uddannelsesleder) + "," +
+    nameof(UserRole.Human_Resources) + "," +
+    nameof(UserRole.Administrator))]
+
+
 
 <MudContainer Class="mt-8 px-8" MaxWidth="MaxWidth.False">
     <MudGrid>
