@@ -8,13 +8,18 @@
     @* Table *@
     <MudItem xs="12" md="@GetTableWidth()">
         <GenericDataTable Height="calc(100vh - 236px)"
-        TItem="Course"
-        Items="@Courses"
-        TableTitle="Klik på et kursus"
-        RowsPerPage="20"
-        EnableSearch="false"
-        OnRowClick="RowClicked">
+                          TItem="Course"
+                          Items="@Courses"
+                          TableTitle="Klik på et kursus"
+                          RowsPerPage="20"
+                          EnableSearch="false"
+                          OnRowClick="RowClicked">
             <HeaderTemplate>
+                <MudTh>
+                    <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Course, object>(x => x.CourseNumber)">
+                        Nummer
+                    </MudTableSortLabel>
+                </MudTh>
                 <MudTh>
                     <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Course, object>(x => x.Module?.Name!)">
                         Modul
@@ -37,6 +42,7 @@
                 </MudTh>
             </HeaderTemplate>
             <RowTemplate Context="course">
+                <MudTd Class="cursor-pointer">@course.CourseNumber</MudTd>
                 <MudTd Class="cursor-pointer" title="@course.Module?.Name">@course.Module?.Name</MudTd>
                 <MudTd Class="cursor-pointer">@course.CourseType</MudTd>
                 <MudTd Class="cursor-pointer">@course.StartDate.ToShortDateString()</MudTd>
@@ -53,13 +59,24 @@
                 <MudForm Model="EditableCourse" @ref="form" @bind-IsValid="@success">
                     <MudGrid Spacing="2" Class="px-2 d-flex justify-center">
 
+                        <MudItem xs="12">
+                            <MudTextField T="int"
+                                          Label="Kursus nummer"
+                                          @bind-Value="EditableCourse!.CourseNumber"
+                                          Variant="Variant.Outlined"
+                                          Disabled="!IsEditing"
+                                          Immediate="true"
+                                          Required="true"
+                                          RequiredError="Kursus nummer er påkrævet." />
+                        </MudItem>
+
                         <!-- Course Module Dropdown -->
                         <MudItem xs="12">
                             <MudSelect T="int"
-                            Label="Modul"
-                            Disabled="!IsEditing"
-                            Variant="Variant.Outlined"
-                            @bind-Value="EditableCourse!.ModuleId">
+                                       Label="Modul"
+                                       Disabled="!IsEditing"
+                                       Variant="Variant.Outlined"
+                                       @bind-Value="EditableCourse!.ModuleId">
                                 @foreach (var module in Modules)
                                 {
                                     <MudSelectItem T="int" Value="module.ModuleId">@module.Name</MudSelectItem>
@@ -70,11 +87,11 @@
                         <!-- CourseType Dropdown -->
                         <MudItem xs="12">
                             <MudSelect T="CourseType"
-                            Label="Kursustype"
-                            Disabled="!IsEditing"
-                            Variant="Variant.Outlined"
-                            Placeholder="Vælg kursustype"
-                            @bind-Value="EditableCourse!.CourseType">
+                                       Label="Kursustype"
+                                       Disabled="!IsEditing"
+                                       Variant="Variant.Outlined"
+                                       Placeholder="Vælg kursustype"
+                                       @bind-Value="EditableCourse!.CourseType">
                                 @foreach (var type in Enum.GetValues<CourseType>())
                                 {
                                     <MudSelectItem T="CourseType" Value="@type">@type.ToString().Replace('_', ' ')</MudSelectItem>
@@ -85,21 +102,21 @@
                         <!-- Start Date Input -->
                         <MudItem xs="12">
                             <MudDatePicker Required
-                            Label="Start Dato"
-                            Disabled="!IsEditing"
-                            Variant="Variant.Outlined"
-                            @bind-Date="tempStartDate"
-                            RequiredError="Start Dato er påkrævet" />
+                                           Label="Start Dato"
+                                           Disabled="!IsEditing"
+                                           Variant="Variant.Outlined"
+                                           @bind-Date="tempStartDate"
+                                           RequiredError="Start Dato er påkrævet" />
                         </MudItem>
 
                         <!-- End Date Input -->
                         <MudItem xs="12">
                             <MudDatePicker Required
-                            Label="Slut Dato"
-                            Disabled="!IsEditing"
-                            @bind-Date="tempEndDate"
-                            Variant="Variant.Outlined"
-                            RequiredError="Slut Dato er påkrævet" />
+                                           Label="Slut Dato"
+                                           Disabled="!IsEditing"
+                                           @bind-Date="tempEndDate"
+                                           Variant="Variant.Outlined"
+                                           RequiredError="Slut Dato er påkrævet" />
                         </MudItem>
 
 
@@ -109,29 +126,29 @@
                                 @if (!IsEditing)
                                 {
                                     <MudButton Variant="Variant.Filled"
-                                    Color="Color.Error"
-                                    OnClick="DeleteCourse">
+                                               Color="Color.Error"
+                                               OnClick="DeleteCourse">
                                         Slet
                                     </MudButton>
 
                                     <MudButton Variant="Variant.Filled"
-                                    Color="Color.Primary"
-                                    OnClick="EnterEditMode">
+                                               Color="Color.Primary"
+                                               OnClick="EnterEditMode">
                                         Rediger
                                     </MudButton>
                                 }
                                 else
                                 {
                                     <MudButton Variant="Variant.Filled"
-                                    Color="Color.Surface"
-                                    OnClick="CancelEdit">
+                                               Color="Color.Surface"
+                                               OnClick="CancelEdit">
                                         Annuller
                                     </MudButton>
 
                                     <MudButton Variant="Variant.Filled"
-                                    Color="Color.Primary"
-                                    OnClick="SaveChanges"
-                                    Disabled="!success">
+                                               Color="Color.Primary"
+                                               OnClick="SaveChanges"
+                                               Disabled="!success">
                                         Gem
                                     </MudButton>
                                 }
@@ -336,6 +353,7 @@
     private void CopyCourseProperties(Course source, Course target)
     {
         target.CourseId = source.CourseId;
+        target.CourseNumber = source.CourseNumber;
         target.ModuleId = source.ModuleId;
         target.StartDate = source.StartDate;
         target.EndDate = source.EndDate;

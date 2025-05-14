@@ -1,0 +1,102 @@
+﻿@inject IUserService UserService
+@inject ISnackbar Snackbar
+
+<MudDialog Style="width: 100%" ActionsClass="justify-space-around" ContentClass="justify-center px-9">
+    <DialogContent>
+        <MudText Typo="Typo.body2">Der er undervisere tilknyttet denne bruger</MudText>
+        <MudForm Model="model" @ref="form" @bind-IsValid="@success">
+            <!-- Dropdowns -->
+            @if (SelectedUserRole == UserRole.Driftskoordinator)
+            {
+                <MudSelect T="int?"
+                           Clearable
+                           Class="mx-10"
+                           Margin="Margin.Normal"
+                           Label="Driftskoordinator"
+                           Variant="Variant.Outlined"
+                           @bind-Value="model.NewOperationCoordinatorId">
+                    @foreach (var coordinator in Users.Where(x => x.UserRole == UserRole.Driftskoordinator && x.UserId != SelectedUserId))
+                    {
+                        <MudSelectItem T="int?" Value="coordinator.UserId">@coordinator.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
+            @if (SelectedUserRole == UserRole.Pædagogisk_konsulent)
+            {
+                <MudSelect T="int?"
+                           Clearable
+                           Class="mx-10"
+                           Margin="Margin.Normal"
+                           Variant="Variant.Outlined"
+                           Label="Pædagogisk Konsulent"
+                           @bind-Value="model.NewEducationalConsultantId">
+                    @foreach (var consultant in Users.Where(x => x.UserRole == UserRole.Pædagogisk_konsulent && x.UserId != SelectedUserId))
+                    {
+                        <MudSelectItem T="int?" Value="consultant.UserId">@consultant.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
+            @if (SelectedUserRole == UserRole.Uddannelsesleder)
+            {
+                <MudSelect T="int?"
+                           Clearable
+                           Class="mx-10"
+                           Margin="Margin.Normal"
+                           Label="Uddannelsesleder"
+                           Variant="Variant.Outlined"
+                           @bind-Value="model.NewEducationalLeaderId">
+                    @foreach (var leader in Users.Where(x => x.UserRole == UserRole.Uddannelsesleder && x.UserId != SelectedUserId))
+                    {
+                        <MudSelectItem T="int?" Value="leader.UserId">@leader.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Color="Color.Surface" Variant="Variant.Filled">Annuller</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Disabled="@(!success)"
+                   OnClick="Submit">
+            Overfør undervisere
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public List<User> Users { get; set; } = new List<User>();
+    [Parameter]
+    public int SelectedUserId { get; set; }
+    [Parameter]
+    public UserRole? SelectedUserRole { get; set; }
+
+    private ReassignUserViewModel model { get; set; } = new();
+    private bool success;
+    private MudForm form = new();
+
+    private async Task Submit()
+    {
+        model.DeletedUserId = SelectedUserId;
+
+        var result = await UserService.ReassignUserAsync(model);
+
+        if (result)
+        {
+            Snackbar.Add("Omdisponering lykkedes!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true)); // Close with success
+        }
+        else
+        {
+            Snackbar.Add("Omdisponering mislykkedes!", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

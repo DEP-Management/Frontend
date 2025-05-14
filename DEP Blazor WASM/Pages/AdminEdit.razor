@@ -1,52 +1,64 @@
 ﻿@page "/admin-rediger"
 
+@inject UserSessionService Session
+
+@attribute [Authorize(Roles =
+	nameof(UserRole.Driftskoordinator) + "," +
+	nameof(UserRole.Pædagogisk_konsulent) + "," +
+	nameof(UserRole.Controller) + "," +
+	nameof(UserRole.Administrator))]
+
+
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-0">
-    <MudItem xs="12" sm="12" md="12" lg="12">
-        <MudTabs Border="true" Centered="true" Elevation="2" Outlined="true">
-            <MudTabPanel Text="Afdeling">
-                <MudPaper Outlined="true">
-                    <EditDepartmentForm />
-                </MudPaper>
-            </MudTabPanel>
-            <MudTabPanel Text="Bruger">
-                <MudPaper Outlined="true">
-                    <EditUserForm />
-                </MudPaper>
-            </MudTabPanel>
-            <MudTabPanel Text="Bøger">
-                <MudPaper>
-                    <EditBookForm />
-                </MudPaper>
-            </MudTabPanel>
-            <MudTabPanel Text="Filkategori">
-                <MudPaper>
-                    <EditFileTagForm />
-                </MudPaper>
-            </MudTabPanel>
-            <MudTabPanel Text="Kursus">
-                <MudPaper>
-                    <EditCourseForm />
-                </MudPaper>
-            </MudTabPanel>
-            <MudTabPanel Text="Lokation">
-                <MudPaper>
-                    <EditLocationForm />
-                </MudPaper>
-            </MudTabPanel>
-            <MudTabPanel Text="Modul">
-                <MudPaper>
-                    <EditModuleForm />
-                </MudPaper>
-            </MudTabPanel>
-            <MudTabPanel Text="Underviser">
-                <MudPaper>
-                    <EditTeacherForm />
-                </MudPaper>
-            </MudTabPanel>
-        </MudTabs>
-    </MudItem>
+	<MudItem xs="12" sm="12" md="12" lg="12">
+		<MudTabs Border="true" Centered="true" Elevation="2" Outlined="true">
+			<MudTabPanel Text="Afdeling">
+				<MudPaper Outlined="true">
+					<EditDepartmentForm />
+				</MudPaper>
+			</MudTabPanel>
+			@if (Session.CurrentUserRole == UserRole.Administrator)
+			{
+				<MudTabPanel Text="Bruger">
+					<MudPaper Outlined="true">
+						<EditUserForm />
+					</MudPaper>
+				</MudTabPanel>
+			}
+			<MudTabPanel Text="Bøger">
+				<MudPaper>
+					<EditBookForm />
+				</MudPaper>
+			</MudTabPanel>
+			<MudTabPanel Text="Filkategori">
+				<MudPaper>
+					<EditFileTagForm />
+				</MudPaper>
+			</MudTabPanel>
+			<MudTabPanel Text="Kursus">
+				<MudPaper>
+					<EditCourseForm />
+				</MudPaper>
+			</MudTabPanel>
+			<MudTabPanel Text="Lokation">
+				<MudPaper>
+					<EditLocationForm />
+				</MudPaper>
+			</MudTabPanel>
+			<MudTabPanel Text="Modul">
+				<MudPaper>
+					<EditModuleForm />
+				</MudPaper>
+			</MudTabPanel>
+			<MudTabPanel Text="Underviser">
+				<MudPaper>
+					<EditTeacherForm />
+				</MudPaper>
+			</MudTabPanel>
+		</MudTabs>
+	</MudItem>
 </MudContainer>
 
 @code {
-    
+
 }

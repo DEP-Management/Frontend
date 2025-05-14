@@ -39,6 +39,19 @@ namespace DEP_Blazor_WASM.Services
             return courses;
         }
 
+        public async Task<List<Course>> GetSelctedCourse(int id)
+        {
+            var response = await _httpClient.GetAsync($"Courses/selcted/{id}");
+
+            var courses = new List<Course>();
+            if (response.IsSuccessStatusCode)
+            {
+                courses = await response.Content.ReadFromJsonAsync<List<Course>>() ?? new List<Course>();
+            }
+
+            return courses;
+        }
+
         public async Task<List<Course>> GetCoursesByModuleAsync(int id)
         {
             var response = await _httpClient.GetAsync($"Courses/module/{id}");

@@ -7,6 +7,8 @@ namespace DEP_Blazor_WASM.Services.Interfaces
     {
         Task<ApiResponse<T>> AddPersonAsync<T>(Person person);
         Task<List<Person>> GetPersonsAsync();
+        Task<List<Person>> GetPersonExcelAsync(int id);
+        Task<List<Person>> GetPersonsExcelAsync(int leaderId);
         Task<List<Person>> GetPersonsByCourseIdAsync(int courseId);
         Task<Person?> GetPersonByIdAsync(int personId);
         Task<bool> UpdatePersonAsync(Person model);

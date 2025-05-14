@@ -11,5 +11,6 @@ namespace DEP_Blazor_WASM.Services.Interfaces
         Task<bool> RefreshAsync();
         Task<int?> GetCurrentUserId();
         Task<UserRole?> GetCurrentUserRole();
+        Task<string> GetCurrentUserName();
     }
 }

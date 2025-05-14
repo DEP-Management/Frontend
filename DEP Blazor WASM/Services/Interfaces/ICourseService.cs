@@ -6,6 +6,7 @@ namespace DEP_Blazor_WASM.Services.Interfaces
     {
         Task<bool> AddCourseAsync(Course course);
         Task<List<Course>> GetCoursesAsync();
+        Task<List<Course>> GetSelctedCourse(int id);
         Task<List<Course>> GetCoursesByModuleAsync(int id);
         Task<bool> UpdateCourseAsync(Course model);
         Task<bool> DeleteCourseAsync(int bookId);
