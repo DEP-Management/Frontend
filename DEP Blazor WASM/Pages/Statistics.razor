@@ -1,0 +1,292 @@
+﻿@page "/statistik"
+
+@using ChartJs.Blazor.BarChart
+@using ChartJs.Blazor.Common
+@using ChartJs.Blazor.Util
+@using System.Drawing
+@using Position = ChartJs.Blazor.Common.Enums.Position;
+@using Color = System.Drawing.Color;
+
+@inject IStatisticsService _statisticsService
+@inject IModuleService _moduleService
+
+@attribute [Authorize(Roles =
+    nameof(UserRole.Driftskoordinator) + "," +
+    nameof(UserRole.Pædagogisk_konsulent) + "," +
+    nameof(UserRole.Human_Resources) + "," +
+    nameof(UserRole.Administrator))]
+
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-0" Style="height: calc(100vh - 64px);">
+    <MudTabs Centered="true" Outlined="true">
+        <MudTabPanel Text="Søjlediagram">
+            <MudPaper Class="pa-4" Height="calc(100vh - 118px)">
+
+                <!-- Dropdowns Container -->
+                <MudItem Class="pa-0 ma-0 d-flex justify-space-evenly">
+                    <MudItem xs="3">
+                        <MudSelect T="int" Label="Diagram" Placeholder="Vælg søjlediagram" Variant="Variant.Outlined" Value="selectedBarChartIndex" ValueChanged="((index) => OnBarChartChanged(index))"
+                                   Required>
+                            <MudSelectItem Disabled T="int" Value="0">Vælg graf</MudSelectItem>
+                            <MudSelectItem T="int" Value="1">Undervisere per afdeling</MudSelectItem>
+                            <MudSelectItem T="int" Value="2">Undervisere per lokation</MudSelectItem>
+                            <MudSelectItem T="int" Value="3">Undervisere per afdeling for modul</MudSelectItem>
+                            <MudSelectItem T="int" Value="4">Undervisere per kursusstatus for modul</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="3">
+                        @if (selectedBarChartIndex == 3 || selectedBarChartIndex == 4)
+                        {
+                            <MudSelect T="Module" Label="Modul" Variant="Variant.Outlined"
+                                       Value="SelectedModule" ValueChanged="OnModuleChanged" Required>
+                                @foreach (var module in Modules)
+                                {
+                                    <MudSelectItem T="Module" Value="@module">@module</MudSelectItem>
+                                }
+                            </MudSelect>
+                        }
+                    </MudItem>
+                </MudItem>
+
+                <!-- Wrap Chart in a div to apply styles -->
+                <div style="flex-grow: 1; display: flex; width: 100%; overflow: hidden;">
+
+                    @if (_barConfig is null)
+                    {
+                        <MudPaper Elevation="0" Width="100%" Height="75vh" Class="d-flex justify-center align-center">
+                            @if ((selectedBarChartIndex == 3 || selectedBarChartIndex == 4) && SelectedModule == null)
+                            {
+                                <MudText>Vælg et modul</MudText>
+                            }
+                            else
+                            {
+                                <MudText>Vælg et diagram</MudText>
+                            }
+                        </MudPaper>
+                    }
+                    else
+                    {
+                        <div style="flex-grow: 1; display: flex; justify-content: center; align-items: center; overflow-x: hidden; width: 100%;">
+                            <div style="width: 100%; max-width: 1400px;">
+                                <!-- Adjust max-width as needed -->
+                                <Chart Config="_barConfig" />
+                            </div>
+                        </div>
+
+                    }
+                </div>
+            </MudPaper>
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>
+
+@code {
+    private BarConfig? _barConfig;
+
+    private List<PersonPerDepartmentViewModel> PersonsPerDepartment = new();
+    private List<PersonPerLocationViewModel> PersonsPerLocation = new();
+    private List<CourseStatusCountViewModel> CourseStatusCount = new();
+    private List<Module> Modules = new();
+
+    private int selectedBarChartIndex { get; set; } = 0;
+    private Module? SelectedModule { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Modules = await _moduleService.GetModulesAsync();
+    }
+
+    private async Task LoadPersonsPerDepartmentBarChart()
+    {
+        PersonsPerDepartment = await _statisticsService.GetPersonsPerDepartmentAsync();
+
+        InitializeBarChartWithTitle("Registrerede undervisere per afdeling");
+
+        // Manually add department names to Labels
+        foreach (var department in PersonsPerDepartment)
+        {
+            _barConfig!.Data.Labels.Add(department.DepartmentName);
+        }
+
+        // Custom color values for the bar chart
+        var dataset = new BarDataset<int>(PersonsPerDepartment.Select(d => d.TeacherCount).ToList())
+            {
+                Label = "Antal undervisere",
+                BackgroundColor = ColorUtil.FromDrawingColor(Color.FromArgb(128, 0, 123, 255)), // Custom blue color (RGBA)
+                BorderColor = ColorUtil.FromDrawingColor(Color.FromArgb(0, 123, 255)), // Custom blue border color (RGB)
+                BorderWidth = 1
+            };
+
+        _barConfig!.Data.Datasets.Add(dataset);
+    }
+
+    private async Task LoadPersonsPerLocationBarChart()
+    {
+        PersonsPerLocation = await _statisticsService.GetPersonsPerLocationAsync();
+
+        InitializeBarChartWithTitle("Registrerede undervisere per lokation");
+
+        // Manually add department names to Labels
+        foreach (var location in PersonsPerLocation)
+        {
+            _barConfig!.Data.Labels.Add(location.LocationName);
+        }
+
+        // Custom color values for the bar chart
+        var dataset = new BarDataset<int>(PersonsPerLocation.Select(d => d.TeacherCount).ToList())
+            {
+                Label = "Antal undervisere",
+                BackgroundColor = ColorUtil.FromDrawingColor(Color.FromArgb(128, 0, 123, 255)), // Custom blue color (RGBA)
+                BorderColor = ColorUtil.FromDrawingColor(Color.FromArgb(0, 123, 255)), // Custom blue border color (RGB)
+                BorderWidth = 1
+            };
+
+        _barConfig!.Data.Datasets.Add(dataset);
+    }
+
+    private async Task LoadPersonsPerDepartmenByModuleIdBarChart(int moduleId)
+    {
+        PersonsPerDepartment = await _statisticsService.GetPersonsPerDepartmentByModuleIdAsync(moduleId);
+
+        InitializeBarChartWithTitle("Registrerede undervisere per afdeling for det valgte modul");
+
+        // Manually add department names to Labels
+        foreach (var department in PersonsPerDepartment)
+        {
+            _barConfig!.Data.Labels.Add(department.DepartmentName);
+        }
+
+        // Custom color values for the bar chart
+        var dataset = new BarDataset<int>(PersonsPerDepartment.Select(d => d.TeacherCount).ToList())
+            {
+                Label = "Antal undervisere",
+                BackgroundColor = ColorUtil.FromDrawingColor(Color.FromArgb(128, 0, 123, 255)), // Custom blue color (RGBA)
+                BorderColor = ColorUtil.FromDrawingColor(Color.FromArgb(0, 123, 255)), // Custom blue border color (RGB)
+                BorderWidth = 1
+            };
+
+        _barConfig!.Data.Datasets.Add(dataset);
+    }
+
+    private async Task LoadPersonsPerCourseStatusByModuleId(int moduleId)
+    {
+        CourseStatusCount = await _statisticsService.GetPersonsPerCourseStatusByModuleIdAsync(moduleId);
+
+        InitializeBarChartWithTitle("Registrerede undervisere per kursusstatus for det valgte modul");
+
+        // Add status labels
+        foreach (var course in CourseStatusCount)
+        {
+            _barConfig!.Data.Labels.Add(course.CourseStatus);
+        }
+
+        // Get the color mapping
+        var statusColors = GetStatusColors();
+
+        // Map colors based on status names dynamically
+        var backgroundColors = CourseStatusCount
+            .Select(course => ColorUtil.FromDrawingColor(statusColors[course.CourseStatus]))
+            .ToList();
+
+        var dataset = new BarDataset<int>(CourseStatusCount.Select(d => d.PersonCount).ToList())
+            {
+                Label = "Antal undervisere",
+                BackgroundColor = backgroundColors.ToArray(),
+                BorderColor = backgroundColors.ToArray(),
+                BorderWidth = 1
+            };
+
+        _barConfig!.Data.Datasets.Add(dataset);
+    }
+
+
+    private Dictionary<string, Color> GetStatusColors()
+    {
+        var statusColors = new Dictionary<string, Color>();
+
+        foreach (Status status in Enum.GetValues(typeof(Status)))
+        {
+            string statusKey = status.ToString().Replace('_', ' ');
+
+            Color color = status switch
+            {
+                Status.Ikke_begyndt => Color.FromArgb(128, 128, 128, 128),      // Gray
+                Status.Begyndt => Color.FromArgb(128, 54, 162, 235),            // Blue
+                Status.Ej_bestået => Color.FromArgb(128, 255, 99, 132),         // Red
+                Status.Bestået => Color.FromArgb(128, 75, 192, 75),             // Green
+                Status.Ikke_gennemført => Color.FromArgb(128, 255, 206, 86),    // Yellow
+                _ => Color.FromArgb(128, 0, 0, 0)                               // Default Black
+            };
+
+            statusColors[statusKey] = color;
+        }
+
+        return statusColors;
+    }
+
+
+    private async Task OnBarChartChanged(int index)
+    {
+        _barConfig = null;
+        SelectedModule = null;
+        selectedBarChartIndex = index;
+
+        if (index == 1)
+        {
+            await LoadPersonsPerDepartmentBarChart();
+        }
+        else if (index == 2)
+        {
+            await LoadPersonsPerLocationBarChart();
+        }
+    }
+
+    private async Task OnModuleChanged(Module module)
+    {
+        if (_barConfig is not null)
+        {
+            _barConfig = null;
+        }
+
+        SelectedModule = module;
+
+        if (selectedBarChartIndex == 3)
+        {
+            await LoadPersonsPerDepartmenByModuleIdBarChart(module.ModuleId);
+        }
+        else if (selectedBarChartIndex == 4)
+        {
+            await LoadPersonsPerCourseStatusByModuleId(module.ModuleId);
+        }
+
+    }
+
+    private void InitializeBarChartWithTitle(string title)
+    {
+        if (_barConfig is null)
+        {
+            _barConfig = new BarConfig
+                {
+                    Options = new BarOptions
+                    {
+                        Responsive = true,
+                        Legend = new Legend { Position = Position.Top, Display = false },
+                        Title = new OptionsTitle { Display = true, Text = title },
+                        Scales = new BarScales
+                        {
+                            YAxes = new List<CartesianAxis>
+                            {
+                                new LinearCartesianAxis
+                                {
+                                    Ticks = new LinearCartesianTicks
+                                    {
+                                        BeginAtZero = true,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+        }
+    }
+}

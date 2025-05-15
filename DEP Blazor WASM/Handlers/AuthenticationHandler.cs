@@ -8,7 +8,7 @@ namespace DEP_Blazor_WASM.Handlers
     {
         private readonly IAuthService _authService;
         private readonly IConfiguration _configuration;
-        private bool _refreshing;
+        private static readonly SemaphoreSlim _refreshLock = new SemaphoreSlim(1, 1);
 
         public AuthenticationHandler(IAuthService authService, IConfiguration configuration)
         {
@@ -20,39 +20,39 @@ namespace DEP_Blazor_WASM.Handlers
         {
             var jwt = await _authService.GetJwtAsync();
             var isToServer = request.RequestUri?.AbsoluteUri.StartsWith(_configuration["ServerUrl"] ?? "") ?? false;
+            var isRefreshRequest = request.RequestUri?.AbsoluteUri.Contains("auth/refresh") ?? false;
 
-            if (isToServer && !string.IsNullOrEmpty(jwt))
+            if (isToServer && !string.IsNullOrEmpty(jwt) && !isRefreshRequest)
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", jwt);
             }
 
             var response = await base.SendAsync(request, cancellationToken);
 
-            if (!_refreshing && !string.IsNullOrEmpty(jwt) && response.StatusCode == HttpStatusCode.Unauthorized)
+            if (response.StatusCode == HttpStatusCode.Unauthorized && !string.IsNullOrEmpty(jwt) && !isRefreshRequest)
             {
+                await _refreshLock.WaitAsync(cancellationToken);
                 try
                 {
-                    _refreshing = true;
-
-                    if (await _authService.RefreshAsync())
+                    var newJwt = await _authService.GetJwtAsync();
+                    if (!string.IsNullOrEmpty(newJwt) && newJwt != jwt)
                     {
-                        jwt = await _authService.GetJwtAsync();
-
-                        if (isToServer && !string.IsNullOrEmpty(jwt))
-                        {
-                            request.Headers.Authorization = new AuthenticationHeaderValue("bearer", jwt);
-                        }
-
+                        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", newJwt);
                         response = await base.SendAsync(request, cancellationToken);
                     }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
+                    else if (await _authService.RefreshAsync())
+                    {
+                        newJwt = await _authService.GetJwtAsync();
+                        if (isToServer && !string.IsNullOrEmpty(newJwt))
+                        {
+                            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", newJwt);
+                            response = await base.SendAsync(request, cancellationToken);
+                        }
+                    }
                 }
                 finally
                 {
-                    _refreshing = false;
+                    _refreshLock.Release();
                 }
             }
 

@@ -151,7 +151,7 @@
                                 {
                                     <MudButton Variant="Variant.Filled"
                                     Color="Color.Error"
-                                    OnClick="DeleteLocation">
+                                    OnClick="DeleteUser">
                                         Slet
                                     </MudButton>
 
@@ -206,6 +206,9 @@
 
     private User? SelectedUser { get; set; }
     private User? EditableUser { get; set; }
+
+    // Used to check for assigned persons when deleting
+    private UserDashboardViewModel UserWithPersons { get; set; } = new();
 
     // Dropdown data
     private List<Department> Departments { get; set; } = new();
@@ -293,28 +296,83 @@
         SelectedUser.Location = Locations.FirstOrDefault(l => l.LocationId == EditableUser.LocationId);
     }
 
-    private async Task DeleteLocation()
+    private async Task DeleteUser()
     {
         if (SelectedUser is null || EditableUser is null)
         {
             return;
         }
 
-        var parameters = new DialogParameters<ConfirmationDialog>
-        {
-            { x => x.Color, Color.Error },
-            { x => x.ContentText, $"Er du sikker på at du vil slette den valgte bruger: {EditableUser.Name}?" },
-            { x => x.ButtonText, "Slet" },
-        };
+        // Step 1: Fetch the user’s associated persons
+        if (!await LoadUserWithPersons()) return;
 
-        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", parameters);
-        var dialogResult = await dialog.Result;
+        // Step 2: Handle reassignment if necessary
+        if (HasPersonsToReassign() && !await HandleUserReassignment()) return;
 
-        if (dialogResult is null || dialogResult.Canceled)
+        // Step 3: Confirm deletion
+        if (!await ConfirmUserDeletion()) return;
+
+        // Step 4: Delete the user
+        await PerformUserDeletion();
+    }
+
+    // Step 1: Fetch user data
+    private async Task<bool> LoadUserWithPersons()
+    {
+        var response = await UserService.GetUserDashboardByIdAsync(SelectedUser.UserId);
+        if (!response.Success || response.Data is null)
         {
-            return; // User chose to not delete
+            Snackbar.Add("Kunne ikke hente brugerens data", Severity.Error);
+            return false;
         }
 
+        UserWithPersons = response.Data;
+        return true;
+    }
+
+    // Step 2: Check if the user is linked to any persons
+    private bool HasPersonsToReassign()
+    {
+        return UserWithPersons.EducationalConsultantPersons.Any() ||
+               UserWithPersons.EducationLeaderPersons.Any() ||
+               UserWithPersons.OperationCoordinatorPersons.Any();
+    }
+
+    // Step 3: Handle reassignment
+    private async Task<bool> HandleUserReassignment()
+    {
+        var reassignParams = new DialogParameters<ReassignUserDialog>
+    {
+        { x => x.Users, Users },
+        { x => x.SelectedUserId, SelectedUser!.UserId },
+        { x => x.SelectedUserRole, SelectedUser!.UserRole }
+    };
+
+        var reassignDialog = await DialogService.ShowAsync<ReassignUserDialog>("Overflyt Bruger", reassignParams);
+        var reassignResult = await reassignDialog.Result;
+
+        return reassignResult is not null && !reassignResult.Canceled;
+    }
+
+    // Step 4: Confirm deletion
+    private async Task<bool> ConfirmUserDeletion()
+    {
+        var confirmParams = new DialogParameters<ConfirmationDialog>
+    {
+        { x => x.Color, Color.Error },
+        { x => x.ContentText, $"Er du sikker på at du vil slette den valgte bruger: {EditableUser.Name}?" },
+        { x => x.ButtonText, "Slet" },
+    };
+
+        var confirmDialog = await DialogService.ShowAsync<ConfirmationDialog>("Bemærk!", confirmParams);
+        var confirmResult = await confirmDialog.Result;
+
+        return confirmResult is not null && !confirmResult.Canceled;
+    }
+
+    // Step 5: Perform the deletion
+    private async Task PerformUserDeletion()
+    {
         bool deleteResult = await UserService.DeleteUserAsync(SelectedUser.UserId);
         if (deleteResult)
         {

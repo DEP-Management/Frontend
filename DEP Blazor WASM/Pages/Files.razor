@@ -8,144 +8,153 @@
 @inject IAuthService AuthService
 @inject NavigationManager NavigationManager
 
-<MudContainer Class="mt-0 px-0" MaxWidth="MaxWidth.False">
-    <MudGrid>
-        <MudItem xs="12" sm="8" md="9">
-            <GenericDataTable Height="calc(100vh - 188px)" TItem="File" Items="@filteredFiles" TableTitle="Filer" Filter="FilterFunc">
-                <HeaderTemplate>
-                    <MudTh>
-                        <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<File, object>(x => x.FileName)">
-                            Filnavn
-                        </MudTableSortLabel>
-                    </MudTh>
-                    <MudTh>
-                        <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<File, object>(x => x.Person?.Name!)">
-                            Underviser
-                        </MudTableSortLabel>
-                    </MudTh>
-                    <MudTh>
-                        <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<File, object>(x => x.UploadDate)">
-                            Oploadet
-                        </MudTableSortLabel>
-                    </MudTh>
-                    <MudTh>
-                        <MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<File, object>(x => x.FileTag?.TagName!)">
-                            Filkategori
-                        </MudTableSortLabel>
-                    </MudTh>
-                    <MudTh Style="width: 0px">Download</MudTh>
-                    <MudTh Style="width: 0px">Slet</MudTh>
-                </HeaderTemplate>
-                <RowTemplate Context="file">
-                    <MudTd Style="max-width: 250px" Class="truncate-text" title="@file.FileName">@file.FileName</MudTd>
-                    <MudTd Style="max-width: 250px" Class="truncate-text cursor-pointer" title="@file.Person?.Name"
-                           @onclick="@(() => NavigationManager.NavigateTo($"/undervisere/profil/{file.Person?.PersonId}"))">@file.Person?.Name</MudTd>
-                    <MudTd>@file.UploadDate.ToShortDateString()</MudTd>
-                    <MudTd>@file.FileTag?.TagName</MudTd>
+@attribute [Authorize(Roles =
+	nameof(UserRole.Driftskoordinator) + "," +
+	nameof(UserRole.Pædagogisk_konsulent) + "," +
+	nameof(UserRole.Uddannelseschef) + "," +
+	nameof(UserRole.Uddannelsesleder) + "," +
+	nameof(UserRole.Human_Resources) + "," +
+	nameof(UserRole.Administrator))]
 
-                    <MudTd Style="text-align: center">
-                        <MudIconButton Icon="@Icons.Material.Filled.FileDownload" Color="Color.Dark" Size="Size.Small" OnClick="@(() => DownloadFile(file.FileId))" />
-                    </MudTd>
-                    <MudTd Style="text-align: center">
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Dark" Size="Size.Small" OnClick="@(() => DeleteFileAsync(file))" />
-                    </MudTd>
-                </RowTemplate>
-            </GenericDataTable>
-        </MudItem>
-        <MudItem xs="2" sm="3" md="3">
-            <MudPaper Elevation="2" Class="pa-4">
-                <FilterComponent ShowFileTagFilter="true"
-                                 FileTags="fileTags"
-                                 SelectedFileTagsChanged="OnFileTagsChanged" />
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
+
+<MudContainer Class="mt-0 px-0" MaxWidth="MaxWidth.False">
+	<MudGrid>
+		<MudItem xs="12" sm="8" md="9">
+			<GenericDataTable Height="calc(100vh - 188px)" TItem="File" Items="@filteredFiles" TableTitle="Filer" Filter="FilterFunc">
+				<HeaderTemplate>
+					<MudTh>
+						<MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<File, object>(x => x.FileName)">
+							Filnavn
+						</MudTableSortLabel>
+					</MudTh>
+					<MudTh>
+						<MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<File, object>(x => x.Person?.Name!)">
+							Underviser
+						</MudTableSortLabel>
+					</MudTh>
+					<MudTh>
+						<MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<File, object>(x => x.UploadDate)">
+							Oploadet
+						</MudTableSortLabel>
+					</MudTh>
+					<MudTh>
+						<MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<File, object>(x => x.FileTag?.TagName!)">
+							Filkategori
+						</MudTableSortLabel>
+					</MudTh>
+					<MudTh Style="width: 0px">Download</MudTh>
+					<MudTh Style="width: 0px">Slet</MudTh>
+				</HeaderTemplate>
+				<RowTemplate Context="file">
+					<MudTd Style="max-width: 250px" Class="truncate-text" title="@file.FileName">@file.FileName</MudTd>
+					<MudTd Style="max-width: 250px" Class="truncate-text cursor-pointer" title="@file.Person?.Name"
+						   @onclick="@(() => NavigationManager.NavigateTo($"/undervisere/profil/{file.Person?.PersonId}"))">@file.Person?.Name</MudTd>
+					<MudTd>@file.UploadDate.ToShortDateString()</MudTd>
+					<MudTd>@file.FileTag?.TagName</MudTd>
+
+					<MudTd Style="text-align: center">
+						<MudIconButton Icon="@Icons.Material.Filled.FileDownload" Color="Color.Dark" Size="Size.Small" OnClick="@(() => DownloadFile(file.FileId))" />
+					</MudTd>
+					<MudTd Style="text-align: center">
+						<MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Dark" Size="Size.Small" OnClick="@(() => DeleteFileAsync(file))" />
+					</MudTd>
+				</RowTemplate>
+			</GenericDataTable>
+		</MudItem>
+		<MudItem xs="2" sm="3" md="3">
+			<MudPaper Elevation="2" Class="pa-4">
+				<FilterComponent ShowFileTagFilter="true"
+								 FileTags="fileTags"
+								 SelectedFileTagsChanged="OnFileTagsChanged" />
+			</MudPaper>
+		</MudItem>
+	</MudGrid>
 </MudContainer>
 
 @code {
-    private List<File> files = new List<File>();
-    private List<FileTagViewModel> fileTags = new List<FileTagViewModel>();
-    private IEnumerable<FileTagViewModel> selectedFileTags = new List<FileTagViewModel>();
-    private UserRole? CurrentUserRole { get; set; }
+	private List<File> files = new List<File>();
+	private List<FileTagViewModel> fileTags = new List<FileTagViewModel>();
+	private IEnumerable<FileTagViewModel> selectedFileTags = new List<FileTagViewModel>();
+	private UserRole? CurrentUserRole { get; set; }
 
-    // Filters files based on the UserRole and applied filter to update the table.
-    private IEnumerable<File> filteredFiles => files
-    .Where(f =>
-        // Check if file has the selected FileTag(s) or if FileTag is null
-        (!selectedFileTags.Any() || selectedFileTags.Any(tag => tag.FileTagId == f.FileTagId)) &&
+	// Filters files based on the UserRole and applied filter to update the table.
+	private IEnumerable<File> filteredFiles => files
+	.Where(f =>
+		// Check if file has the selected FileTag(s) or if FileTag is null
+		(!selectedFileTags.Any() || selectedFileTags.Any(tag => tag.FileTagId == f.FileTagId)) &&
 
-        // Check if file's FileTagUserRole has a matching role, or if the FileTag is null
-        (f.FileTag == null || f.FileTag.FileTagUserRoles?.Any(utr => utr.Role == CurrentUserRole) == true)
-    );
+		// Check if file's FileTagUserRole has a matching role, or if the FileTag is null
+		(f.FileTag == null || f.FileTag.FileTagUserRoles?.Any(utr => utr.Role == CurrentUserRole) == true)
+	);
 
-    protected override async Task OnInitializedAsync()
-    {
-        files = await fileService.GetAllFilesAsync();
-        fileTags = await fileTagService.GetAllFileTagsAsync();
-        CurrentUserRole = await AuthService.GetCurrentUserRole();
-        Console.WriteLine(CurrentUserRole);
+	protected override async Task OnInitializedAsync()
+	{
+		files = await fileService.GetAllFilesAsync();
+		fileTags = await fileTagService.GetAllFileTagsAsync();
+		CurrentUserRole = await AuthService.GetCurrentUserRole();
+		Console.WriteLine(CurrentUserRole);
 
-        // Serialize each file in the files list to JSON and print it using System.Text.Json
-        foreach (var file in files)
-        {
-            var fileJson = JsonSerializer.Serialize(file, new JsonSerializerOptions { WriteIndented = true });
-            Console.WriteLine(fileJson);
-        }
-    }
+		// Serialize each file in the files list to JSON and print it using System.Text.Json
+		foreach (var file in files)
+		{
+			var fileJson = JsonSerializer.Serialize(file, new JsonSerializerOptions { WriteIndented = true });
+			Console.WriteLine(fileJson);
+		}
+	}
 
-    // Filter function to allow searching for properties in GenericDataTable component.
-    private bool FilterFunc(File item, string searchString)
-    {
-        if (string.IsNullOrWhiteSpace(searchString))
-            return true;
-        return item.FileName.Contains(searchString, StringComparison.OrdinalIgnoreCase);
-    }
+	// Filter function to allow searching for properties in GenericDataTable component.
+	private bool FilterFunc(File item, string searchString)
+	{
+		if (string.IsNullOrWhiteSpace(searchString))
+			return true;
+		return item.FileName.Contains(searchString, StringComparison.OrdinalIgnoreCase);
+	}
 
-    private async Task DownloadFile(int fileId)
-    {
-        try
-        {
-            await fileService.DownloadFileAsync(fileId);
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"Error downloading file: {ex.Message}");
-        }
-    }
+	private async Task DownloadFile(int fileId)
+	{
+		try
+		{
+			await fileService.DownloadFileAsync(fileId);
+		}
+		catch (Exception ex)
+		{
+			Console.Error.WriteLine($"Error downloading file: {ex.Message}");
+		}
+	}
 
-    private async Task DeleteFileAsync(File file)
-    {
-        var parameters = new DialogParameters<ConfirmationDialog>
-    {
-        { x => x.ContentText, $"Er du sikker på du vil slette filen {file.FileName}" },
-        { x => x.ButtonText, "Slet" },
-        { x => x.Color, Color.Error }
-    };
+	private async Task DeleteFileAsync(File file)
+	{
+		var parameters = new DialogParameters<ConfirmationDialog>
+	{
+		{ x => x.ContentText, $"Er du sikker på du vil slette filen {file.FileName}" },
+		{ x => x.ButtonText, "Slet" },
+		{ x => x.Color, Color.Error }
+	};
 
-        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Slet fil?", parameters);
-        var result = await dialog.Result;
+		var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Slet fil?", parameters);
+		var result = await dialog.Result;
 
-        if (result.Canceled)
-        {
-            return;
-        }
+		if (result.Canceled)
+		{
+			return;
+		}
 
-        var deleteSuccess = await fileService.DeleteFileAsync(file);
+		var deleteSuccess = await fileService.DeleteFileAsync(file);
 
-        if (!deleteSuccess)
-        {
-            Snackbar.Add("Fil kunne ikke slettes", Severity.Error);
-        }
-        else
-        {
-            Snackbar.Add("Fil slettet", Severity.Success);
-            files.Remove(file);
-        }
-    }
+		if (!deleteSuccess)
+		{
+			Snackbar.Add("Fil kunne ikke slettes", Severity.Error);
+		}
+		else
+		{
+			Snackbar.Add("Fil slettet", Severity.Success);
+			files.Remove(file);
+		}
+	}
 
-    // Accept values from the filter EventCallback to know what FileTags are selected
-    private void OnFileTagsChanged(IEnumerable<FileTagViewModel> fileTags)
-    {
-        selectedFileTags = fileTags;
-    }
+	// Accept values from the filter EventCallback to know what FileTags are selected
+	private void OnFileTagsChanged(IEnumerable<FileTagViewModel> fileTags)
+	{
+		selectedFileTags = fileTags;
+	}
 }

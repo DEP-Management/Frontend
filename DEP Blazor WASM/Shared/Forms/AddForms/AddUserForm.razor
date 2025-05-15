@@ -60,7 +60,7 @@
 
             <MudItem xs="12" md="6">
                 <MudSelect T="UserRole" Label="Brugerrolle" Variant="Variant.Outlined"
-                           Value="NewUser.UserRole" ValueChanged="UserRoleChanged" Required>
+                           Value="NewUser.UserRole" ValueChanged="UserRoleChanged">
                     @foreach (var role in Enum.GetValues<UserRole>())
                     {
                         <MudSelectItem T="UserRole" Value="@role">@role.ToString().Replace('_', ' ')</MudSelectItem>
@@ -112,7 +112,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Console.WriteLine("USERFORM ONINIT");
         Departments = await DepartmentService.GetDepartmentsAsync();
         EducationBosses = await UserService.GetUsersByUserRoleAsync(UserRole.Uddannelseschef);
         Locations = await LocationService.GetLocationsAsync();
@@ -124,7 +123,7 @@
 
         if (userRole != UserRole.Uddannelsesleder)
         {
-            // Clearing EducationBossId if Udannelsesleder isn't the selected role
+            // Clearing EducationBossId if Uddannelsesleder isn't the selected role
             NewUser.EducationBossId = null;
             EducationLeaderSelected = false;
         }
@@ -132,20 +131,23 @@
         {
             EducationLeaderSelected = true;
         }
-        Console.WriteLine("Selected userRole: " + userRole);
     }
 
     private async Task Submit()
     {
-        Console.WriteLine("Submit pressed, here's yer dern UserRole: " + NewUser.UserRole);
-        var response = await UserService.AddUserAsync<AddUserRequest>(NewUser);
+        var response = await UserService.AddUserAsync<UserViewModel>(NewUser);
 
         if (response.Success)
         {
             var newUser = response.Data;
             Snackbar.Add(response.Message, Severity.Success);
+
+            if (newUser?.UserRole == UserRole.Uddannelseschef)
+            {
+                EducationBosses.Add(newUser);
+            }
             await form.ResetAsync();
-            NewUser.UserRole = UserRole.Administrator;
+            NewUser = new AddUserRequest();
         }
         else
         {

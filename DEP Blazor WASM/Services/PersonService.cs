@@ -61,6 +61,42 @@ namespace DEP_Blazor_WASM.Services
             return persons;
         }
 
+        public async Task<List<Person>> GetPersonExcelAsync(int id)
+        {
+            var response = await _httpClient.GetAsync("person/personexcel/" + id);
+
+            var persons = new List<Person>();
+            if (response.IsSuccessStatusCode)
+            {
+                persons = await response.Content.ReadFromJsonAsync<List<Person>>() ?? new List<Person>();
+            }
+
+            foreach (var person in persons)
+            {
+                person.CompletedModules = person.PersonCourses.Count(pc => pc.Status == Status.Bestået);
+            }
+
+            return persons;
+        }
+
+        public async Task<List<Person>> GetPersonsExcelAsync(int leaderId)
+        {
+            var response = await _httpClient.GetAsync("person/personsexcel/" + leaderId);
+
+            var persons = new List<Person>();
+            if (response.IsSuccessStatusCode)
+            {
+                persons = await response.Content.ReadFromJsonAsync<List<Person>>() ?? new List<Person>();
+            }
+
+            foreach (var person in persons)
+            {
+                person.CompletedModules = person.PersonCourses.Count(pc => pc.Status == Status.Bestået);
+            }
+
+            return persons;
+        }
+
         public async Task<List<Person>> GetPersonsByCourseIdAsync(int courseId)
         {
             var response = await _httpClient.GetAsync($"person/courseId/{courseId}");

@@ -7,6 +7,13 @@
 @inject IDialogService DialogService
 @inject IFileService fileService
 
+@attribute [Authorize(Roles =
+    nameof(UserRole.Driftskoordinator) + "," +
+    nameof(UserRole.Pædagogisk_konsulent) + "," +
+    nameof(UserRole.Uddannelseschef) + "," +
+    nameof(UserRole.Uddannelsesleder) + "," +
+    nameof(UserRole.Administrator))]
+
 @if (person == null)
 {
     <p>Loading...</p>
@@ -27,83 +34,88 @@ else
             <MudItem xs="12" sm="8" md="8" Style="height: 100%; display: flex; flex-direction: column; gap: 8px;">
                 <MudTabs Border="true" Centered="true" Elevation="2" Outlined="true">
 
-                    @* TODO: Turn this into a table like the file tab! *@
                     <!-- Courses Tab -->
                     <MudTabPanel Text="Kurser">
-                        @* <MudPaper Class="px-0" Outlined="false" Elevation="2"> *@
-                        @* <MudPaper Outlined="true" Style="flex: 1; overflow-y: auto; padding: 8px; position: relative;"> *@
-                        <MudPaper Outlined="true" Style="max-height: calc(100vh - 120px); overflow-y: auto;">
+                        <MudPaper Class="px-0">
+
                             <!-- Sticky Add PersonCourse Button Container -->
-                            <div style="position: sticky; top: 0px; background-color: none; z-index: 1;">
-                                @* <MudIconButton Icon="@Icons.Material.Outlined.Add"
-                                                   Color="Color.Primary"
-                                                   Variant="Variant.Filled"
-                                                   OnClick="@OpenAddPersonCourseDialog"
-                                                   Style="margin-bottom: 12px;"
-                                                   Size="Size.Medium"
-                                                   title="Tilføj underviser til kursus" /> *@
+                            <MudFab Class="my-2 ms-2"
+                                    StartIcon="@Icons.Material.Filled.Add"
+                                    Color="Color.Primary"
+                                    OnClick="OpenAddPersonCourseDialog"
+                                    Size="Size.Small"
+                                    title="Tilføj til kursus"
+                                    Label="Tilføj til kursus" />
 
-                                <MudFab Class="my-2 ms-2"
-                                StartIcon="@Icons.Material.Filled.Add"
-                                Color="Color.Primary"
-                                OnClick="OpenAddPersonCourseDialog"
-                                Size="Size.Small"
-                                title="Tilføj til kursus"
-                                Label="Tilføj til kursus" />
-                            </div>
-
-                            <!-- Cards Container -->
-                            <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start;">
-                                @foreach (var pc in person.PersonCourses.OrderBy(x => x.Status))
-                                {
-                                    <MudCard Outlined="true" Style="flex: 0 1 calc(50% - 16px); max-width: calc(50% - 16px);">
-                                        <MudCardContent>
-                                            <!-- Delete Button -->
-                                            <MudIconButton Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" OnClick="@(() => DeletePersonCourseAsync(pc))" Style="float: right;" />
-
-                                            <!-- Course Name -->
-                                            <MudText Typo="Typo.h6">@pc.Course?.Module?.Name</MudText>
-
-                                            <!-- Course Type -->
-                                            <MudText Typo="Typo.body2">@pc.Course?.CourseType.ToString()</MudText>
-
-                                            <!-- Period -->
-                                            <MudText Typo="Typo.body2">
-                                                Periode: @pc.Course?.StartDate.ToString("dd/MM/yy") - @pc.Course?.EndDate.ToString("dd/MM/yy")
-                                            </MudText>
-
-                                            <!-- Status Dropdown -->
-                                            <MudSelect Dense="true" T="Status" Label="Status" Variant="Variant.Outlined" Placeholder="Please Select"
-                                            Value="pc.Status" ValueChanged="value => OnStatusChanged(pc, value)">
-                                                @foreach (Status status in Enum.GetValues(typeof(Status)))
-                                                {
-                                                    <MudSelectItem Value="status">@status.ToString().Replace("_", " ")</MudSelectItem>
-                                                }
-                                            </MudSelect>
-
-                                            <!-- Status Color Indicator -->
-                                            <div style="margin-top: 8px;">
-                                                <div class="moduleItemColorIndicator" style="background-color: @GetStatusColor(pc.Status); width: 20px; height: 20px;"></div>
-                                            </div>
-                                        </MudCardContent>
-                                    </MudCard>
-                                }
-                            </div>
+                            <MudTable Items="@person.PersonCourses" Height="calc(100vh - 292px)" AllowUnsorted="false" Striped="true" Dense="true" Hover="true" CanCancelEdit="true" SortLabel="Sort By"
+                                      CommitEditTooltip="Gem ændring" RowEditPreview="BackupItem" RowEditCancel="ResetItemToOriginalValues"
+                                      RowEditCommit="ItemHasBeenCommitted" IsEditRowSwitchingBlocked="true"
+                                      ApplyButtonPosition="TableApplyButtonPosition.Start" EditButtonPosition="TableEditButtonPosition.Start" EditTrigger="TableEditTrigger.EditButton">
+                                <ToolBarContent>
+                                    <MudText Typo="Typo.h6">Kurser</MudText>
+                                </ToolBarContent>
+                                <ColGroup>
+                                    <col style="width:25px;" />
+                                    <col style="width:16px;" />
+                                    <col style="width:20%;" />
+                                    <col style="width:10%;" />
+                                    <col style="width:40%;" />
+                                    <col style="width:10%;" />
+                                    <col style="width:10%;" />
+                                    <col style="width:25px;" />
+                                </ColGroup>
+                                <HeaderContent>
+                                    <MudTh Class="pa-0" Style="width: 16px;"></MudTh>
+                                    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<PersonCourse, object>(x=>x.Status)">Status</MudTableSortLabel></MudTh>
+                                    <MudTh><MudTableSortLabel SortBy="new Func<PersonCourse, object>(x=>x.Course?.CourseNumber!)">Nummer</MudTableSortLabel></MudTh>
+                                    <MudTh><MudTableSortLabel SortBy="new Func<PersonCourse, object>(x=>x.Course?.Module?.Name!)">Navn</MudTableSortLabel></MudTh>
+                                    <MudTh><MudTableSortLabel SortBy="new Func<PersonCourse, object>(x=>x.Course?.CourseType!)">Kursustype</MudTableSortLabel></MudTh>
+                                    <MudTh><MudTableSortLabel SortBy="new Func<PersonCourse, object>(x=>x.Course?.StartDate!)">Start</MudTableSortLabel></MudTh>
+                                    <MudTh><MudTableSortLabel SortBy="new Func<PersonCourse, object>(x=>x.Course?.EndDate!)">Slut</MudTableSortLabel></MudTh>
+                                    <MudTh>Fjern</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd Class="pa-0" Style="max-width: 16px;"> <div style="width: 16px; height: 32px; background-color: @GetStatusColor(@context.Status);"></div></MudTd>
+                                    <MudTd DataLabel="Status">@context.Status.ToString().Replace('_', ' ')</MudTd>
+                                    <MudTd DataLabel="Nummer">@context.Course?.CourseNumber</MudTd>
+                                    <MudTd DataLabel="Navn" Class="truncate-text" Style="max-width: 350px" title="@context.Course?.Module?.Name">@context.Course?.Module?.Name</MudTd>
+                                    <MudTd DataLabel="Kursustype">@context.Course?.CourseType</MudTd>
+                                    <MudTd DataLabel="Start">@context.Course?.StartDate.ToShortDateString()</MudTd>
+                                    <MudTd DataLabel="Slut">@context.Course?.EndDate.ToShortDateString()</MudTd>
+                                    <MudTd DataLabel="Delete" Style="text-align: center">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Dark" Size="Size.Small" OnClick="@(() => DeletePersonCourseAsync(context))" />
+                                    </MudTd>
+                                </RowTemplate>
+                                <RowEditingTemplate>
+                                    <MudTd Class="pa-0" Style="max-width: 16px;"> <div style="width: 16px; height: 32px; background-color: @GetStatusColor(@context.Status);"></div></MudTd>
+                                    <MudTd DataLabel="Status">
+                                        <MudSelect T="Status" Label="Status" Placeholder="Sæt status" Margin="Margin.Dense" Dense="true" Variant="Variant.Outlined" @bind-Value="context.Status">
+                                            @foreach (var status in Enum.GetValues<Status>())
+                                            {
+                                                <MudSelectItem T="Status" Value="@status">@status.ToString().Replace('_', ' ')</MudSelectItem>
+                                            }
+                                        </MudSelect>
+                                    </MudTd>
+                                    <MudTd DataLabel="Nummer">@context.Course?.CourseNumber</MudTd>
+                                    <MudTd DataLabel="Navn" Class="truncate-text" Style="max-width: 350px;">@context.Course?.Module?.Name</MudTd>
+                                    <MudTd DataLabel="Kursustype">@context.Course?.CourseType</MudTd>
+                                    <MudTd DataLabel="Start">@context.Course?.StartDate.ToShortDateString()</MudTd>
+                                    <MudTd DataLabel="Slut">@context.Course?.EndDate.ToShortDateString()</MudTd>
+                                </RowEditingTemplate>
+                                <PagerContent>
+                                    <MudTablePager />
+                                </PagerContent>
+                                <EditButtonContent Context="button">
+                                    <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Edit" Class="pa-0" OnClick="@button.ButtonAction" Disabled="@button.ButtonDisabled" />
+                                </EditButtonContent>
+                            </MudTable>
                         </MudPaper>
-                        @* </MudPaper> *@
                     </MudTabPanel>
 
                     <!-- Files Tab -->
                     <MudTabPanel Text="Filer">
                         <MudPaper Class="px-0">
                             <!-- Add File Button -->
-                            @* <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                           Color="Color.Primary"
-                                           OnClick="@OpenFileUploadDialog"
-                                           Style="margin-bottom: 12px;"
-                                           Size="Size.Medium"
-                                           Variant="Variant.Filled"
-                                           title="Add File" /> *@
                             <MudFab Class="my-2 ms-2"
                             StartIcon="@Icons.Material.Filled.Add"
                             Color="Color.Primary"
@@ -153,58 +165,6 @@ else
                         </MudPaper>
                     </MudTabPanel>
                 </MudTabs>
-                @*   <!-- PersonCourses Section -->
-                <MudPaper Outlined="true" Style="flex: 1; overflow-y: auto; padding: 8px; position: relative;">
-                    <!-- Sticky Add PersonCourse Button Container -->
-                    <div style="position: sticky; top: 0px; width: 40px; background-color: none; z-index: 1;">
-                        <MudIconButton Icon="@Icons.Material.Outlined.Add"
-                                       Color="Color.Primary"
-                                       Variant="Variant.Filled"
-                                       OnClick="@OpenAddPersonCourseDialog"
-                                       Style="margin-bottom: 12px;"
-                                       Size="Size.Medium"
-                                       title="Tilføj underviser til kursus" />
-                    </div>
-
-                    <!-- Cards Container -->
-                    <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start;">
-                        @foreach (var pc in person.PersonCourses.OrderBy(x => x.Status))
-                        {
-                            <MudCard Outlined="true" Style="flex: 0 1 calc(50% - 16px); max-width: calc(50% - 16px);">
-                                <MudCardContent>
-                                    <!-- Delete Button -->
-                                    <MudIconButton Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" OnClick="@(() => DeletePersonCourseAsync(pc))" Style="float: right;" />
-
-                                    <!-- Course Name -->
-                                    <MudText Typo="Typo.h6">@pc.Course?.Module?.Name</MudText>
-
-                                    <!-- Course Type -->
-                                    <MudText Typo="Typo.body2">@pc.Course?.CourseType.ToString()</MudText>
-
-                                    <!-- Period -->
-                                    <MudText Typo="Typo.body2">
-                                        Periode: @pc.Course?.StartDate.ToString("dd/MM/yy") - @pc.Course?.EndDate.ToString("dd/MM/yy")
-                                    </MudText>
-
-                                    <!-- Status Dropdown -->
-                                    <MudSelect Dense="true" T="Status" Label="Status" Variant="Variant.Outlined" Placeholder="Please Select"
-                                               Value="pc.Status" ValueChanged="value => OnStatusChanged(pc, value)">
-                                        @foreach (Status status in Enum.GetValues(typeof(Status)))
-                                        {
-                                            <MudSelectItem Value="status">@status.ToString().Replace("_", " ")</MudSelectItem>
-                                        }
-                                    </MudSelect>
-
-                                    <!-- Status Color Indicator -->
-                                    <div style="margin-top: 8px;">
-                                        <div class="moduleItemColorIndicator" style="background-color: @GetStatusColor(pc.Status); width: 20px; height: 20px;"></div>
-                                    </div>
-                                </MudCardContent>
-                            </MudCard>
-                        }
-                    </div>
-                </MudPaper>
- *@
             </MudItem>
 
         </MudGrid>
@@ -218,7 +178,7 @@ else
     [Parameter] public int personId { get; set; } // This property binds to the route parameter
 
     private Person? person;
-
+    private Status statusBeforeEdit;
     private UserRole CurrentUserRole { get; set; }
 
     private IEnumerable<File> filteredProfileFiles => person.Files
@@ -232,6 +192,33 @@ else
         person = await personService.GetPersonByIdAsync(personId);
     }
 
+    private async void ItemHasBeenCommitted(object pc)
+    {
+        // Call the service to update the person course in the database
+        bool updateSuccess = await personCourseService.UpdatePersonCourseAsync((PersonCourse)pc);
+
+        // Show a message to the user based on whether the update was successful
+        if (updateSuccess)
+        {
+            // Display success message
+            Snackbar.Add("Kursets status blev opdateret", Severity.Success);
+        }
+        else
+        {
+            // Display error message
+            Snackbar.Add("Kursets status kunne ikke opdateres", Severity.Error);
+        }
+    }
+
+    private void BackupItem(object pc)
+    {
+        statusBeforeEdit = ((PersonCourse)pc).Status;
+    }
+
+    private void ResetItemToOriginalValues(object pc)
+    {
+        ((PersonCourse)pc).Status = statusBeforeEdit;
+    }
 
     /// <summary>
     /// Deletes a PersonCourse after confirming the action with the user.
@@ -415,12 +402,12 @@ else
     {
         return status switch
         {
-            Status.Ikke_begyndt => "#ddd", // Gray
-                                           // Status.Begyndt => "#ff9900",
-            Status.Ej_bestået => "red",   // Red
-            Status.Bestået => "green",   // Green
-            Status.Ikke_gennemført => "#ff9900", // Orange
-            _ => "#000" // Default (Black)
+            Status.Ikke_begyndt => "#808080",      // Gray
+            Status.Begyndt => "#36A2EB",           // Blue
+            Status.Ej_bestået => "#FF6384",        // Red
+            Status.Bestået => "#4BC04B",           // Green
+            Status.Ikke_gennemført => "#FFCE56",   // Yellow
+            _ => "#000000"                         // Default Black
         };
     }
 
