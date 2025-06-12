@@ -39,7 +39,7 @@
                 </MudTd>
                 <MudTd Style="text-align:center; max-width: 30px">@person.CompletedModules</MudTd>
                 <MudTd>
-                    <MudCheckBox T="bool" Value="@person.SvuApplied" ReadOnly="true" @onclick="() => RowClicked(person)" />
+                    <MudCheckBox T="bool" Value="@person.SvuEligible" ReadOnly="true" @onclick="() => RowClicked(person)" />
                 </MudTd>
                 <MudTd>
                     <MudCheckBox T="bool" Value="@person.SvuApplied" ReadOnly="true" @onclick="() => RowClicked(person)" />
@@ -82,6 +82,8 @@
                         <MudItem xs="12" md="6">
                             <MudTextField T="string"
                                           Class="mb-3"
+                                          Required="true"
+                                          Immediate="true"
                                           Label="Initialer"
                                           Margin="Margin.Dense"
                                           Disabled="!IsEditing"
