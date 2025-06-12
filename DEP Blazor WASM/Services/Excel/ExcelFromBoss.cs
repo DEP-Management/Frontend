@@ -175,8 +175,8 @@ namespace DEP_Blazor_WASM.Services.Excel
         private void AddLeaderRow(IXLWorksheet worksheet, EducationalLeaderViewModel leader)
         {
             worksheet.Cell(row, 2).Value = leader.Name;
-            worksheet.Cell(row, 4).Value = leader.Department?.Name;
-            worksheet.Cell(row, 5).Value = leader.Location?.Name;
+            worksheet.Cell(row, 3).Value = leader.Department?.Name;
+            worksheet.Cell(row, 4).Value = leader.Location?.Name;
             row++;
         }
 
@@ -192,11 +192,11 @@ namespace DEP_Blazor_WASM.Services.Excel
 
         private void AddCourseRow(IXLWorksheet worksheet, PersonCourse personCourse)
         {
-            worksheet.Cell(row, 2).Value = row;
             worksheet.Cell(row, 2).Value = personCourse.Course?.Module?.Name;
-            worksheet.Cell(row, 3).Value = personCourse.Course?.StartDate.ToShortDateString();
-            worksheet.Cell(row, 4).Value = personCourse.Course?.EndDate.ToShortDateString();
-            worksheet.Cell(row, 5).Value = personCourse.Course?.CourseType.ToString().Replace('_', ' ');
+            worksheet.Cell(row, 3).Value = personCourse.Course.CourseNumber;
+            worksheet.Cell(row, 4).Value = personCourse.Course?.StartDate.ToShortDateString();
+            worksheet.Cell(row, 5).Value = personCourse.Course?.EndDate.ToShortDateString();
+            worksheet.Cell(row, 6).Value = personCourse.Course?.CourseType.ToString().Replace('_', ' ');
             worksheet.Cell(row, 7).Value = personCourse.Status.ToString().Replace('_', ' ');
             row++;
         }
@@ -242,7 +242,7 @@ namespace DEP_Blazor_WASM.Services.Excel
             worksheet.Cell(row, 4).Value = "Start dato";
             worksheet.Cell(row, 5).Value = "Slut dato";
             worksheet.Cell(row, 6).Value = "Kursus type";
-            worksheet.Cell(row, 6).Value = "Status";
+            worksheet.Cell(row, 7).Value = "Status";
 
             ApplyHeaderStyling(worksheet);
             row++;

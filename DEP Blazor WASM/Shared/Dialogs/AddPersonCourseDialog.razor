@@ -91,6 +91,7 @@ else
 	protected override async Task OnInitializedAsync()
 	{
 		Modules = await ModuleService.GetModulesWithCoursesAsync();
+		Console.WriteLine("test");
 	}
 
 	private void OnModuleChanged(ModuleWithCourseViewModel module)
