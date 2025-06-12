@@ -24,7 +24,7 @@
 <MudContainer Class="mt-8 px-8" MaxWidth="MaxWidth.False">
     <MudGrid>
         <MudItem xs="12" sm="6" md="GetTableWidth()" Style="padding: 0;">
-            <GenericDataTable Height="calc(100vh - 220px)" TItem="EducationalBossViewModel" Filter="BossFilterFunc" Items="@educationBosses" TableTitle="Uddanelseschefer" OnRowClick="GetLeaderByBossIdOnClick">
+            <GenericDataTable Height="calc(100vh - 220px)" TItem="EducationalBossViewModel" Filter="BossFilterFunc" Items="@educationBosses" TableTitle="Uddannelseschefer" OnRowClick="GetLeaderByBossIdOnClick">
                 <HeaderTemplate>
                     <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<EducationalBossViewModel, object>(x => x.Name)">Navn</MudTableSortLabel></MudTh>
                 </HeaderTemplate>
@@ -36,7 +36,7 @@
                     {
                         <MudTr>
                             <td>
-                                <GenericDataTable TItem="User" Filter="LeaderFilterFunc" Items="@educationLeaders" TableTitle="Uddanelsesledere" OnRowClick="GetTeacherByLeaderIdOnClick">
+                                <GenericDataTable TItem="User" Filter="LeaderFilterFunc" Items="@educationLeaders" TableTitle="Uddannelsesledere" OnRowClick="GetTeacherByLeaderIdOnClick">
                                     <HeaderTemplate>
                                         <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<User, object>(x => x.Name)">Navn</MudTableSortLabel></MudTh>
                                         <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<User, object>(x => x.Department?.Name!)">Afdeling</MudTableSortLabel></MudTh>
@@ -121,18 +121,18 @@
             </MudPaper>
             <MudPaper Elevation="2" Class="pa-4">
                 <MudMenu Label="Eksporter til Excel" EndIcon="@Icons.Material.Filled.KeyboardArrowDown" Style="display: flex; justify-content: center;">
-                    <MudMenuItem OnClick="ExportBossesToExcel">Eksporter alle uddanelseschefer til Excel</MudMenuItem>
+                    <MudMenuItem OnClick="ExportBossesToExcel">Eksporter alle uddannelseschefer til Excel</MudMenuItem>
                     @if (bossId != 0)
                     {
-                        <MudMenuItem OnClick="ExportSelectedBossTExcel">Eksporter valgte uddanelseschefer til Excel</MudMenuItem>
+                        <MudMenuItem OnClick="ExportSelectedBossTExcel">Eksporter valgt uddannelseschef til Excel</MudMenuItem>
                     }
                     @if (leaderId != 0)
                     {
-                        <MudMenuItem OnClick="ExportSelectedLeaderToExcel">Eksporter valgte uddanelsesleder til Excel</MudMenuItem>
+                        <MudMenuItem OnClick="ExportSelectedLeaderToExcel">Eksporter valgt uddannelsesleder til Excel</MudMenuItem>
                     }
                     @if (teacherId != 0)
                     {
-                        <MudMenuItem OnClick="ExportSelectedTeacherToExcel">Eksporter valgte underviser til Excel</MudMenuItem>
+                        <MudMenuItem OnClick="ExportSelectedTeacherToExcel">Eksporter valgt underviser til Excel</MudMenuItem>
                     }
                 </MudMenu>
             </MudPaper>

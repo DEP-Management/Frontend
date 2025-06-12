@@ -82,7 +82,7 @@
 </MudStack>
 @code {
 #nullable enable
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
 
     private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mud-width-full mud-height-full";
     private string _dragClass = DefaultDragClass;
