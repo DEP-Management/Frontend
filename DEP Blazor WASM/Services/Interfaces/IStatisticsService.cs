@@ -8,5 +8,8 @@ namespace DEP_Blazor_WASM.Services.Interfaces
         Task<List<PersonPerDepartmentViewModel>> GetPersonsPerDepartmentByModuleIdAsync(int moduleId);
         Task<List<PersonPerLocationViewModel>> GetPersonsPerLocationAsync();
         Task<List<CourseStatusCountViewModel>> GetPersonsPerCourseStatusByModuleIdAsync(int moduleId);
+        Task<List<CourseStatusCountViewModel>> GetPersonsPerCourseStatusFilteredAsync(CourseStatusFilterViewModel filter);
+        Task<List<PersonPerDepartmentViewModel>> GetPersonsPerModuleAsync();
+        Task<List<PersonPerDepartmentViewModel>> GetPersonsPerModuleIncludingEmptyModulesAsync();
     }
 }
