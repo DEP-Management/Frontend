@@ -65,5 +65,43 @@ namespace DEP_Blazor_WASM.Services
 
             return viewModels;
         }
+
+        public async Task<List<CourseStatusCountViewModel>> GetPersonsPerCourseStatusFilteredAsync(CourseStatusFilterViewModel filter)
+        {
+            var response = await _httpClient.PostAsJsonAsync("Statistics/coursestatuscount/filter", filter);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<List<CourseStatusCountViewModel>>() ?? new();
+            }
+
+            return new();
+        }
+
+        public async Task<List<PersonPerDepartmentViewModel>> GetPersonsPerModuleAsync()
+        {
+            var response = await _httpClient.GetAsync($"Statistics/personspermodule");
+
+            var viewModels = new List<PersonPerDepartmentViewModel>();
+            if (response.IsSuccessStatusCode)
+            {
+                viewModels = await response.Content.ReadFromJsonAsync<List<PersonPerDepartmentViewModel>>() ?? new List<PersonPerDepartmentViewModel>();
+            }
+
+            return viewModels;
+        }
+
+        public async Task<List<PersonPerDepartmentViewModel>> GetPersonsPerModuleIncludingEmptyModulesAsync()
+        {
+            var response = await _httpClient.GetAsync($"Statistics/personspermoduleincludingempty");
+
+            var viewModels = new List<PersonPerDepartmentViewModel>();
+            if (response.IsSuccessStatusCode)
+            {
+                viewModels = await response.Content.ReadFromJsonAsync<List<PersonPerDepartmentViewModel>>() ?? new List<PersonPerDepartmentViewModel>();
+            }
+
+            return viewModels;
+        }
     }
 }
