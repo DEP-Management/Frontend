@@ -24,7 +24,7 @@
 <MudContainer Class="mt-8 px-8" MaxWidth="MaxWidth.False">
     <MudGrid>
         <MudItem xs="12" sm="6" md="GetTableWidth()" Style="padding: 0;">
-            <GenericDataTable Height="calc(100vh - 220px)" TItem="Module" Items="@modules" TableTitle="Muduler" OnRowClick="GetCoursesByModuleIdOnClick">
+            <GenericDataTable Height="calc(100vh - 220px)" TItem="Module" Items="@modules" TableTitle="Moduler" OnRowClick="GetCoursesByModuleIdOnClick">
                 <HeaderTemplate>
                     <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Module, object>(x => x.Name)">Navn</MudTableSortLabel></MudTh>
                 </HeaderTemplate>
@@ -36,7 +36,7 @@
                     {
                         <MudTr>
                             <td>
-                                <GenericDataTable TItem="Course" Items="@filteredCourses" TableTitle="Curser" OnRowClick="GetPersonsByCourseIdOnClick">
+                                <GenericDataTable TItem="Course" Items="@filteredCourses" TableTitle="Kurser" OnRowClick="GetPersonsByCourseIdOnClick">
                                     <HeaderTemplate>
                                         <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Course, object>(x => x.CourseNumber)">Kursus Nummer</MudTableSortLabel></MudTh>
                                         <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Course, object>(x => x.StartDate)">Start Dato</MudTableSortLabel></MudTh>
@@ -99,15 +99,15 @@
                                  SelectedStatusesChanged="OnStatusChange" />
             </MudPaper>
             <MudPaper Elevation="2" Class="pa-4">
-                <MudMenu Label="Expoter til Excel" EndIcon="@Icons.Material.Filled.KeyboardArrowDown" Style="display: flex; justify-content: center;">
+                <MudMenu Label="Eksporter til Excel" EndIcon="@Icons.Material.Filled.KeyboardArrowDown" Style="display: flex; justify-content: center;">
                     <MudMenuItem OnClick="ExportModulesToExcel">Eksporter alle moduler til Excel</MudMenuItem>
                     @if (moduleId != 0)
                     {
-                        <MudMenuItem OnClick="ExportSelectedModuleTExcel">Eksporter valgte modul til Excel</MudMenuItem>
+                        <MudMenuItem OnClick="ExportSelectedModuleTExcel">Eksporter valgt modul til Excel</MudMenuItem>
                     }
                     @if (courseId != 0)
                     {
-                        <MudMenuItem OnClick="ExportSelectedCourseToExcel">Eksporter valgte kursus til Excel</MudMenuItem>
+                        <MudMenuItem OnClick="ExportSelectedCourseToExcel">Eksporter valgt kursus til Excel</MudMenuItem>
                     }
                 </MudMenu>
             </MudPaper>

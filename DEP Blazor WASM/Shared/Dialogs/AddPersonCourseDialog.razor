@@ -27,7 +27,7 @@ else
 				@if (FilteredCourses.Count != 0)
 				{
 					<MudSelect Disabled="FilteredCourses.Count == 0 || ModulePassed == true" Class="mb-3" Label="Kursus" Placeholder="Vælg kursus" Variant="Variant.Outlined"
-							   T="Course" Value="SelectedCourse" ValueChanged="OnCourseChanged" Required>
+					T="Course" Value="SelectedCourse" ValueChanged="OnCourseChanged" Required>
 						@foreach (var course in FilteredCourses.OrderBy(x => x.CourseType).ThenBy(x => x.StartDate))
 						{
 							<MudSelectItem T="Course" Value="@course">
@@ -74,7 +74,7 @@ else
 
 @code {
 	[CascadingParameter]
-	private MudDialogInstance MudDialog { get; set; }
+	private IMudDialogInstance MudDialog { get; set; }
 
 	[Parameter]
 	public Person? Person { get; set; }
@@ -91,6 +91,7 @@ else
 	protected override async Task OnInitializedAsync()
 	{
 		Modules = await ModuleService.GetModulesWithCoursesAsync();
+		Console.WriteLine("test");
 	}
 
 	private void OnModuleChanged(ModuleWithCourseViewModel module)
@@ -137,7 +138,10 @@ else
 		if (resultSuccess)
 		{
 			Snackbar.Add("Underviser tilføjet til kurset.", Severity.Success);
+
+			var newModule = new Module { Name = SelectedModule?.Name };
 			newPersonCourse.Course = SelectedCourse;
+			newPersonCourse.Course.Module = newModule;
 
 			MudDialog.Close(DialogResult.Ok(newPersonCourse));
 		}
