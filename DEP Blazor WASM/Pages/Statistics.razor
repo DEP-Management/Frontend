@@ -61,7 +61,7 @@
 					</MudItem>
 					<MudItem Class="pa-0 ma-0 d-flex justify-center">
 						<MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="LoadPersonsPerCourseStatusFiltered">
-							TEST
+							Hent
 						</MudButton>
 					</MudItem>
 				}
@@ -84,13 +84,24 @@
 					}
 					else
 					{
-						<div style="flex-grow: 1; display: flex; justify-content: center; align-items: center; overflow-x: hidden; width: 100%;">
+						if(selectedBarChartIndex == 4)
+						{
+							<div style="flex-grow: 1; display: flex; justify-content: center; align-items: center; overflow-x: hidden; width: 100%;">
+							<div style="width: 100%; max-width: 880px;">
+								<!-- Adjust max-width as needed -->
+								<Chart Config="_barConfig" />
+							</div>
+							</div>
+						}
+						else
+						{
+							<div style="flex-grow: 1; display: flex; justify-content: center; align-items: center; overflow-x: hidden; width: 100%;">
 							<div style="width: 100%; max-width: 1080px;">
 								<!-- Adjust max-width as needed -->
 								<Chart Config="_barConfig" />
 							</div>
 						</div>
-
+						}
 					}
 				</div>
 			</MudPaper>
